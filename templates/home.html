@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>What's inside?</h1>
+<ul class="stack">
+{% for b in boxes %}
+  {% set s = subtree_stats(b['id']) %}{% set pics = preview_photos(b['id']) %}
+  <li><a class="glass boxcard" href="{{ url_for('box', node_id=b['id']) }}">
+    <span class="thumbs">
+      {% for p in pics %}<img src="{{ url_for('photo', filename=p) }}" alt="" loading="lazy">{% else %}<span class="emoji">📦</span>{% endfor %}
+    </span>
+    <span class="txt"><strong>{{ b['name'] }}</strong>
+      <small>{{ s['boxes'] }} small box{{ '' if s['boxes'] == 1 else 'es' }} · {{ s['items'] }} item{{ '' if s['items'] == 1 else 's' }}</small></span>
+    <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+  </a></li>
+{% endfor %}
+</ul>
+{% if edit_mode %}<p class="muted small">Editing mode (this Mac only) · <a href="{{ url_for('reindex_all') }}">Rebuild search index</a></p>{% endif %}
+{% endblock %}

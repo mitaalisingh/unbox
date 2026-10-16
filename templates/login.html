@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block shell %}
+<main class="login">
+  <div class="glass loginbox">
+    <div class="logo">📦</div>
+    <h1>Welcome</h1>
+    <p class="muted">Enter the password to see what's inside.</p>
+    <form method="post">
+      <input type="password" id="pw" name="password" placeholder="Password" autofocus
+             autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" aria-label="Password">
+      <label class="check"><input type="checkbox" id="showpw"> Show password</label>
+      <button type="submit" class="primary">Open</button>
+    </form>
+    {% if error %}<p class="flash">{{ error }}</p>{% endif %}
+  </div>
+</main>
+<script>
+  document.getElementById('showpw').addEventListener('change', function () {
+    document.getElementById('pw').type = this.checked ? 'text' : 'password';
+  });
+</script>
+{% endblock %}

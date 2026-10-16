@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% set back_url = url_for('home') %}
+{% block title %}Search{% endblock %}
+{% block content %}
+{% if not q %}<h1>Search</h1><p class="sub">Type what you're looking for. It doesn't have to be the exact word.</p>
+{% elif not results %}<h1>No match</h1><p class="sub">Nothing found for “{{ q }}”. Try another word.</p>
+{% else %}
+<h1>{{ results|length }} result{{ '' if results|length == 1 else 's' }}</h1>
+<p class="sub">for “{{ q }}”</p>
+<ul class="stack">
+{% for r in results %}{% set k = r['node'] %}
+  <li><a class="glass boxcard" href="{{ url_for('box' if k['is_box'] else 'item', node_id=k['id']) }}">
+    <span class="thumbs one">{% if k['photo'] %}<img src="{{ url_for('photo', filename=k['photo']) }}" alt="" loading="lazy">{% else %}<span class="emoji">{{ '📦' if k['is_box'] else '🔹' }}</span>{% endif %}</span>
+    <span class="txt"><strong>{{ k['name'] }}</strong><small>{{ r['path']|join(' › ') }}</small></span>
+    <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+  </a></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

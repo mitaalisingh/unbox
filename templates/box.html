@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% set back_url = url_for('box', node_id=crumbs[-1]['id']) if crumbs else url_for('home') %}
+{% block title %}{{ node['name'] }}{% endblock %}
+{% block content %}
+<h1>{{ node['name'] }}</h1>
+{% if node['description'] %}<p class="sub">{{ node['description'] }}</p>{% endif %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('home') }}">Home</a>
+  {% for c in crumbs %}<a class="chip" href="{{ url_for('box', node_id=c['id']) }}">{{ c['name'] }}</a>{% endfor %}
+  {% set st = subtree_stats(node['id']) %}
+  <span class="chip solid">{{ st['items'] }} item{{ '' if st['items'] == 1 else 's' }}{% if st['boxes'] %} · {{ st['boxes'] }} small box{{ '' if st['boxes'] == 1 else 'es' }}{% endif %}</span>
+  {% if node['weight_kg'] %}<span class="chip solid">{{ node['weight_kg'] }} kg</span>{% endif %}
+  {% if edit_mode %}<a class="chip solid" href="{{ url_for('edit', node_id=node['id']) }}">✎ Edit this box</a>{% endif %}
+</div>
+
+{% set boxes = kids|selectattr('is_box')|list %}{% set things = kids|rejectattr('is_box')|list %}
+{% if boxes %}
+<ul class="stack">
+{% for k in boxes %}{% set s = subtree_stats(k['id']) %}{% set pics = preview_photos(k['id']) %}
+  <li><a class="glass boxcard" href="{{ url_for('box', node_id=k['id']) }}">
+    <span class="thumbs">{% for p in pics %}<img src="{{ url_for('photo', filename=p) }}" alt="" loading="lazy">{% else %}<span class="emoji">📦</span>{% endfor %}</span>
+    <span class="txt"><strong>{{ k['name'] }}</strong>
+      <small>{{ s['items'] }} item{{ '' if s['items'] == 1 else 's' }}{% if k['weight_kg'] %} · {{ k['weight_kg'] }} kg{% endif %}</small></span>
+    <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+  </a></li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if things %}
+{% if boxes %}<h2>Loose items</h2>{% endif %}
+<ul class="grid">
+{% for k in things %}
+  <li><a class="tile" href="{{ url_for('item', node_id=k['id']) }}">
+    {% if k['photo'] %}<img src="{{ url_for('photo', filename=k['photo']) }}" alt="" loading="lazy">{% else %}<span class="emoji">🔹</span>{% endif %}
+    <span class="cap"><strong>{{ k['name'] }}</strong>{% if k['weight_kg'] %}<small>{{ k['weight_kg'] }} kg</small>{% endif %}</span>
+  </a></li>
+{% endfor %}
+</ul>
+{% elif not boxes %}<p class="muted">Nothing added to this box yet.</p>{% endif %}
+
+{% if edit_mode %}
+<details class="glass addbox" open>
+  <summary>Add to {{ node['name'] }}</summary>
+  <form method="post" action="{{ url_for('add', parent_id=node['id']) }}" enctype="multipart/form-data">
+    <label class="check"><input type="radio" name="kind" value="item" checked> Item</label>
+    <label class="check"><input type="radio" name="kind" value="box"> Small box</label>
+    <label>Name <input name="name" required placeholder="e.g. Travel cup"></label>
+    <label>Tags (optional, helps search) <input name="tags" placeholder="mug, flask, steel"></label>
+    <label>Short description <input name="description"></label>
+    <label>Weight kg (boxes) <input name="weight_kg" inputmode="decimal"></label>
+    <label>Photo <input type="file" name="photo" accept="image/*"></label>
+    <button class="primary" type="submit">Add</button>
+  </form>
+</details>
+<details class="glass addbox">
+  <summary>Add many items at once</summary>
+  <form method="post" action="{{ url_for('bulk_add', parent_id=node['id']) }}" enctype="multipart/form-data">
+    <label>One item per line. Add tags after a colon.
+      <textarea name="lines" rows="6" placeholder="Playing cards: game, deck&#10;Travel cup: mug, flask&#10;Phone charger"></textarea></label>
+    <label>Or pick many photos. Each photo becomes one item named after its file (playing-cards.HEIC → "playing cards").
+      <input type="file" name="photos" accept="image/*" multiple></label>
+    <button class="primary" type="submit">Add all</button>
+  </form>
+</details>
+{% endif %}
+{% endblock %}

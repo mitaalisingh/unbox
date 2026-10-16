@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#2a2723">
+<title>{% block title %}Unbox{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% block shell %}
+<div class="wrap">
+  <header class="topbar">
+    {% if back_url %}
+      <a class="back" href="{{ back_url }}"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Back</a>
+    {% else %}<span class="round ghost"></span>{% endif %}
+    <span class="brand">Unbox</span>
+    {% if edit_mode %}
+      <a class="round" href="{{ url_for('labels') }}" aria-label="Print QR labels"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v6h-4M14 18h2v2h-2z"/></svg></a>
+    {% else %}
+      <a class="round" href="{{ url_for('logout') }}" aria-label="Lock"><svg viewBox="0 0 24 24"><path d="M6 11h12v9H6zM8 11V8a4 4 0 018 0v3"/></svg></a>
+    {% endif %}
+  </header>
+  <main>
+    {% with msgs = get_flashed_messages() %}{% for m in msgs %}<p class="flash">{{ m }}</p>{% endfor %}{% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<nav class="dock" aria-label="Quick actions">
+  <a class="round big" href="{{ url_for('home') }}" aria-label="All boxes"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9h-6v-6H9v6H3z"/></svg></a>
+  <form class="dock-search" action="{{ url_for('search') }}" method="get" role="search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/></svg>
+    <input type="search" name="q" value="{{ q or '' }}" placeholder="Search for anything, e.g. cup" aria-label="Search" autocomplete="off">
+  </form>
+</nav>
+{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

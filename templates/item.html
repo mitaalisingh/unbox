@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% set back_url = url_for('box', node_id=crumbs[-1]['id']) %}
+{% block title %}{{ node['name'] }}{% endblock %}
+{% block content %}
+{% if node['photo'] %}<img class="hero" src="{{ url_for('photo', filename=node['photo']) }}" alt="{{ node['name'] }}">{% endif %}
+<div class="pager">
+  {% if prev_id %}<a class="round" id="prev" href="{{ url_for('item', node_id=prev_id) }}" aria-label="Previous item"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></a>{% else %}<span class="round ghost"></span>{% endif %}
+  <span class="muted">{{ pos }} of {{ total }}</span>
+  {% if next_id %}<a class="round" id="next" href="{{ url_for('item', node_id=next_id) }}" aria-label="Next item"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></a>{% else %}<span class="round ghost"></span>{% endif %}
+</div>
+<h1>{{ node['name'] }}</h1>
+<div class="chips">
+  {% if node['description'] %}<span class="chip solid">{{ node['description'] }}</span>{% endif %}
+  {% if node['weight_kg'] %}<span class="chip">{{ node['weight_kg'] }} kg</span>{% endif %}
+  {% if edit_mode %}<a class="chip solid" href="{{ url_for('edit', node_id=node['id']) }}">✎ Edit</a>{% endif %}
+</div>
+<p class="sub">Find it in</p>
+<div class="chips">
+  {% for c in crumbs %}<a class="chip" href="{{ url_for('box', node_id=c['id']) }}">{{ c['name'] }}</a>{% endfor %}
+</div>
+{% endblock %}
+{% block scripts %}
+<style>
+  html, body { overflow-x: hidden; }
+  body { touch-action: pan-y pinch-zoom; }          /* vertical scroll stays native; sideways drags come to us */
+  main { will-change: transform; }
+</style>
+<script>
+(function () {
+  var prev = document.getElementById('prev'), next = document.getElementById('next');
+  var main = document.querySelector('main');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Entrance: the page we arrive on slides in from the side we swiped towards.
+  try {
+    var came = sessionStorage.getItem('swipeIn'); sessionStorage.removeItem('swipeIn');
+    if (came && !reduce) {
+      main.style.transition = 'none';
+      main.style.transform = 'translateX(' + (came === 'next' ? 70 : -70) + 'px)';
+      main.style.opacity = '0.2';
+      requestAnimationFrame(function () { requestAnimationFrame(function () {
+        main.style.transition = 'transform .24s cubic-bezier(.2,.8,.2,1), opacity .24s ease-out';
+        main.style.transform = ''; main.style.opacity = '';
+      }); });
+    }
+  } catch (e) {}
+
+  var x0 = 0, y0 = 0, dx = 0, mode = null, down = false;
+  function springBack() {
+    main.style.transition = reduce ? 'none' : 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s';
+    main.style.transform = ''; main.style.opacity = '';
+  }
+  document.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) { down = false; return; }
+    down = true; mode = null; dx = 0; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY;
+    main.style.transition = 'none';
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (!down) return;
+    var t = e.touches[0], mx = t.clientX - x0, my = t.clientY - y0;
+    if (mode === null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) mode = Math.abs(mx) > Math.abs(my) * 1.2 ? 'h' : 'v';
+    if (mode !== 'h') return;
+    dx = mx;
+    var target = dx < 0 ? next : prev;
+    var shown = target ? dx : dx * 0.25;                     // nothing there? resist, like a rubber band
+    main.style.transform = 'translateX(' + shown + 'px)';
+    main.style.opacity = String(1 - Math.min(Math.abs(shown) / 500, 0.4));
+  }, { passive: true });
+  function finish() {
+    if (!down) return; down = false;
+    if (mode !== 'h') return;
+    var go = dx < 0 ? next : prev;
+    var far = Math.abs(dx) > Math.min(110, window.innerWidth * 0.28);
+    if (go && far) {
+      if (reduce) { location.href = go.href; return; }
+      main.style.transition = 'transform .16s ease-in, opacity .16s ease-in';
+      main.style.transform = 'translateX(' + (dx < 0 ? -window.innerWidth : window.innerWidth) + 'px)';
+      main.style.opacity = '0';
+      try { sessionStorage.setItem('swipeIn', dx < 0 ? 'next' : 'prev'); } catch (e) {}
+      setTimeout(function () { location.href = go.href; }, 150);
+    } else {
+      springBack();
+    }
+  }
+  document.addEventListener('touchend', finish, { passive: true });
+  document.addEventListener('touchcancel', function () { down = false; springBack(); }, { passive: true });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) springBack(); });   // coming back with the Back button
+
+  document.addEventListener('keydown', function (e) {
+    var go = e.key === 'ArrowRight' ? next : e.key === 'ArrowLeft' ? prev : null;
+    if (go && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) location.href = go.href;
+  });
+})();
+</script>
+{% endblock %}

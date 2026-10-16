@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% set back_url = url_for('box', node_id=crumbs[-1]['id']) if crumbs else url_for('home') %}
+{% block content %}
+<div class="chips"><a class="chip" href="{{ url_for('home') }}">Home</a>{% for c in crumbs %}<a class="chip" href="{{ url_for('box', node_id=c['id']) }}">{{ c['name'] }}</a>{% endfor %}</div>
+<h1>Edit: {{ node['name'] }}</h1>
+<form class="stack" method="post" enctype="multipart/form-data">
+  <label>Name <input name="name" value="{{ node['name'] }}" required></label>
+  <label>Tags <input name="tags" value="{{ node['tags'] }}"></label>
+  <label>Short description <input name="description" value="{{ node['description'] }}"></label>
+  <label>Weight kg <input name="weight_kg" inputmode="decimal" value="{{ node['weight_kg'] if node['weight_kg'] is not none else '' }}"></label>
+  {% if choices %}
+  <label>Lives in
+    <select name="parent_id">{% for cid, label in choices %}<option value="{{ cid }}" {{ 'selected' if cid == node['parent_id'] }}>{{ label }}</option>{% endfor %}</select>
+  </label>{% endif %}
+  {% if node['photo'] %}<img class="hero" src="{{ url_for('photo', filename=node['photo']) }}" alt="">
+  <div class="rot">
+    <button type="submit" formaction="{{ url_for('rotate', node_id=node['id']) }}" formnovalidate name="dir" value="ccw">↺ Left</button>
+    <button type="submit" formaction="{{ url_for('rotate', node_id=node['id']) }}" formnovalidate name="dir" value="cw">↻ Right</button>
+    <button type="submit" formaction="{{ url_for('rotate', node_id=node['id']) }}" formnovalidate name="dir" value="180">⟲ Flip</button>
+    <button type="button" id="crop-start">✂ Crop</button>
+  </div>
+  <div id="crop-panel" hidden>
+    <p class="muted">Drag the box over the part you want to keep, then press Apply.</p>
+    <div class="crop-wrap"><img id="crop-img" src="{{ url_for('photo', filename=node['photo']) }}" alt=""></div>
+    <div class="rot"><button type="button" id="crop-apply">Apply crop</button><button type="button" id="crop-cancel">Cancel</button></div>
+    <p class="muted">Cropping replaces the photo for this item and can't be undone.</p>
+  </div>
+  <label class="check"><input type="checkbox" name="remove_photo"> Remove photo</label>{% endif %}
+  <label>{{ 'Replace photo' if node['photo'] else 'Photo' }} <input type="file" name="photo" accept="image/*"></label>
+  <button class="primary" type="submit">Save</button>
+</form>
+{% if node['parent_id'] is not none %}
+<form method="post" action="{{ url_for('delete', node_id=node['id']) }}" onsubmit="return confirm('Delete {{ node['name']|e }}{{ ' and everything inside it' if node['is_box'] }}?')">
+  <button class="danger" type="submit">Delete</button>
+</form>{% endif %}
+{% endblock %}
+{% block scripts %}{% if node['photo'] %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script>
+(function () {
+  var start = document.getElementById('crop-start');
+  if (!start) return;
+  if (typeof Cropper === 'undefined') { start.hidden = true; return; }   // offline: hide Crop
+  var panel = document.getElementById('crop-panel'), img = document.getElementById('crop-img'), cropper = null;
+  start.addEventListener('click', function () {
+    panel.hidden = false; start.hidden = true;
+    cropper = new Cropper(img, { viewMode: 1, autoCropArea: 0.9, background: false });
+    panel.scrollIntoView({ block: 'nearest' });
+  });
+  document.getElementById('crop-cancel').addEventListener('click', function () {
+    cropper.destroy(); cropper = null; panel.hidden = true; start.hidden = false;
+  });
+  document.getElementById('crop-apply').addEventListener('click', function () {
+    var d = cropper.getData(true), f = document.createElement('form');
+    f.method = 'post'; f.action = "{{ url_for('crop', node_id=node['id']) }}";
+    ['x', 'y', 'width', 'height'].forEach(function (k, i) {
+      var inp = document.createElement('input'); inp.type = 'hidden';
+      inp.name = ['x', 'y', 'w', 'h'][i]; inp.value = d[k]; f.appendChild(inp);
+    });
+    document.body.appendChild(f); f.submit();
+  });
+})();
+</script>
+{% endif %}{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% set back_url = url_for('home') %}
+{% block title %}Labels{% endblock %}
+{% block content %}
+<div class="noprint">
+  <h1>QR labels</h1>
+  <p class="lead">Each QR opens <code>{{ base }}</code>/box/… on the phone that scans it, then asks for the password.</p>
+  {% if weak_base %}<p class="flash">This is still your local address. Set PUBLIC_URL to the live site address before printing, or the QR won't work on his phone.</p>{% endif %}
+  <p><a class="pill" href="{{ url_for('labels', all=0 if all_boxes else 1) }}">{{ 'Only big boxes' if all_boxes else 'Include small boxes too' }}</a>
+  <button class="pill" onclick="window.print()">Print</button></p>
+</div>
+<div class="sheet">
+{% for l in labels %}
+  <figure class="label">
+    <div class="qr">{{ l['svg']|safe }}</div>
+    <figcaption><strong>{{ l['node']['name'] }}</strong>{% if l['node']['weight_kg'] %}<span>{{ l['node']['weight_kg'] }} kg</span>{% endif %}<span>Scan to see what's inside</span></figcaption>
+  </figure>
+{% endfor %}
+</div>
+{% endblock %}

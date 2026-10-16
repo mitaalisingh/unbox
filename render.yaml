@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: unbox
+    runtime: docker
+    plan: free
+    healthCheckPath: /login
+    envVars:
+      - key: APP_PASSWORD
+        sync: false          # you type this in the Render dashboard; never commit it
+      - key: SECRET_KEY
+        generateValue: true  # Render makes a random one so logins survive restarts
+      - key: BEHIND_PROXY
+        value: "1"
+      - key: DATA_PASSPHRASE
+        sync: false          # the passphrase you typed when running: python deploy_tools.py pack

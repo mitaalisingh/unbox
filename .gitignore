@@ -1,0 +1,11 @@
+.venv/
+.env
+__pycache__/
+*.pyc
+.DS_Store
+data/
+deploy_data/
+.deploy_key
+labels_*.html
+*.HEIC
+*.heic
