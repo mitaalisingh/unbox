@@ -46,9 +46,16 @@ Before opening this to the public: check the current status of India's Digital P
 - **Naming:** compare the on-device model's suggested names against hand-written names for the same photos; report the share named correctly, and the share fixed by the user.
 - **Users:** a small test with real movers; report what confused them.
 
+## Where the build stands
+
+- Done and tested against a real Supabase project: accounts with email confirmation and a consent record, many trips per user, archive and delete, and privacy between users (a second account sees none of the first account's trips).
+- Not yet verified live: the password-reset email. Supabase's built-in sender is limited to a few emails per hour on the free plan.
+- Next: boxes, items and photos in the multi-user app, then batch capture with on-device naming.
+
 ## Known risks
 
 - Free tiers change. Quotas and sleep behaviour must be re-checked at launch.
+- **Email:** Supabase's built-in email sender is for testing only. Sources report about 2 emails per hour, delivery to spam, and silent failures once the cap is hit. Before real users, set up a custom SMTP provider (for example Resend, Brevo, SendGrid or Mailgun) with a verified sender, and confirm the current limits on the provider's own pages.
 - On-device models are slow on cheap phones and need a first-time download.
 - Phone screens can pause background work on iPhones; batches are processed in chunks and uploads must resume.
 - Free storage (about 500 MB) fills quickly with photos; they are resized to keep that manageable.
