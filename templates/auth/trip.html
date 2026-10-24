@@ -58,10 +58,10 @@
       <input type="hidden" name="parent_id" value="{{ node.id if node else '' }}">
       <label class="check"><input type="radio" name="kind" value="item" checked> Item</label>
       <label class="check"><input type="radio" name="kind" value="box"> Box</label>
-      <label>Name <input name="name" required maxlength="80" placeholder="e.g. Travel mug"></label>
-      <label>Tags (optional, helps search) <input name="tags" maxlength="200" placeholder="cup, flask, steel"></label>
-      <label>Short note <input name="description" maxlength="300"></label>
-      <label>Weight in kg (optional) <input name="weight_kg" inputmode="decimal" placeholder="1.5"></label>
+      <label>Name <input name="name" required maxlength="80" placeholder="e.g. Travel mug" autocomplete="off"></label>
+      <label>Tags (optional, helps search) <input name="tags" maxlength="200" placeholder="cup, flask, steel" autocomplete="off"></label>
+      <label>Short note <input name="description" maxlength="300" autocomplete="off"></label>
+      <label>Weight in kg (optional) <input name="weight_kg" inputmode="decimal" placeholder="1.5" autocomplete="off"></label>
       <label>Photo (optional) <input type="file" name="photo" accept="image/*"></label>
       <p class="muted small">Location data is removed from photos when you upload them.</p>
       <button class="primary" type="submit">Add</button>
