@@ -1,0 +1,10 @@
+{% extends "auth/base.html" %}
+{% block content %}
+<div class="glass loginbox" style="margin:40px auto">
+  <div class="logo">📦</div>
+  <h1>Scan a box, see what's inside</h1>
+  <p class="muted">Photograph what you pack, label the boxes with a QR code, and share a trip with whoever receives them.</p>
+  <a class="chip solid" href="{{ url_for('signup') }}" style="margin:6px">Create an account</a>
+  <a class="chip" href="{{ url_for('login') }}" style="margin:6px">Log in</a>
+</div>
+{% endblock %}

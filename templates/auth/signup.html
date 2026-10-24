@@ -1,0 +1,15 @@
+{% extends "auth/base.html" %}
+{% block title %}Create an account · Unbox{% endblock %}
+{% block content %}
+<h1>Create an account</h1>
+<form method="post" class="glass addbox" style="margin-top:14px">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>Email <input type="email" name="email" value="{{ email }}" required autocomplete="email" autocapitalize="none"></label>
+  <label>Password (at least 10 characters) <input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
+  <label>Type it again <input type="password" name="password2" required minlength="10" autocomplete="new-password"></label>
+  <label class="check"><input type="checkbox" name="age18" required> I am 18 or older</label><br>
+  <label class="check"><input type="checkbox" name="terms" required> <span>I have read the <a href="{{ url_for('privacy') }}" target="_blank">privacy notice</a> and I agree</span></label>
+  <button class="primary" type="submit">Create account</button>
+</form>
+<p class="muted">Already have one? <a href="{{ url_for('login') }}">Log in</a></p>
+{% endblock %}

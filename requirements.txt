@@ -7,3 +7,4 @@ numpy==2.5.3
 gunicorn==26.2.0
 fastembed==0.9.0
 cryptography
+httpx

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#2a2723">
+<title>{% block title %}Unbox{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home') }}">Unbox</a>
+    {% if logged_in %}
+    <form method="post" action="{{ url_for('logout') }}" style="margin:0">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="back" type="submit" aria-label="Log out">Log out</button>
+    </form>
+    {% else %}<a class="back" href="{{ url_for('login') }}">Log in</a>{% endif %}
+  </header>
+  <main>
+    {% with msgs = get_flashed_messages() %}{% for m in msgs %}<p class="flash">{{ m }}</p>{% endfor %}{% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+</body>
+</html>

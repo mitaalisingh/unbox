@@ -9,3 +9,4 @@ deploy_data/
 labels_*.html
 *.HEIC
 *.heic
+.pytest_cache/

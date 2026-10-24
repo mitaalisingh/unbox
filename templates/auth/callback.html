@@ -1,0 +1,18 @@
+{% extends "auth/base.html" %}
+{% block title %}One moment · Unbox{% endblock %}
+{% block content %}
+<div class="glass loginbox" style="margin:40px auto"><h1>One moment…</h1><p class="muted">Checking your link.</p>
+<noscript><p class="flash">Please turn on JavaScript to finish signing in.</p></noscript></div>
+<form id="f" method="post" action="{{ url_for('auth_session') }}" hidden>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input name="access_token"><input name="refresh_token"><input name="expires_in"><input name="type">
+  <input name="error_code"><input name="error">
+</form>
+<script>
+  // The email link puts its details after "#", which the server never sees. Hand them over, then wipe them from the address bar.
+  var p = new URLSearchParams(location.hash.replace(/^#/, "")), f = document.getElementById("f");
+  ["access_token", "refresh_token", "expires_in", "type", "error_code", "error"].forEach(function (k) { f.elements[k].value = p.get(k) || ""; });
+  history.replaceState(null, "", location.pathname);
+  f.submit();
+</script>
+{% endblock %}

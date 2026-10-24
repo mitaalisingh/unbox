@@ -1,0 +1,15 @@
+{% extends "auth/base.html" %}
+{% block title %}Check your email · Unbox{% endblock %}
+{% block content %}
+<div class="glass loginbox" style="margin:30px auto">
+  <div class="logo">✉️</div>
+  <h1>Check your email</h1>
+  {% if purpose == "reset" %}
+  <p class="muted">If <strong>{{ email }}</strong> has an account, we've sent it a link to choose a new password. The link works once and expires soon.</p>
+  {% else %}
+  <p class="muted">We've sent a message to <strong>{{ email }}</strong>. Open the link in it to confirm your address, then log in.</p>
+  {% endif %}
+  <p class="muted small">Nothing arrived? Look in spam, or wait a few minutes.</p>
+  <a class="chip" href="{{ url_for('login') }}">Back to log in</a>
+</div>
+{% endblock %}
