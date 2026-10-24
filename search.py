@@ -91,3 +91,28 @@ def rank(query, rows, text_of):
                     else:
                         scored[r["id"]] = [r, s]
     return sorted(((r, s) for r, s in scored.values()), key=lambda x: -x[1])
+
+
+def _as_list(vec):
+    v = np.asarray(vec, dtype=np.float32)
+    v = v / (np.linalg.norm(v) or 1.0)
+    return [round(float(x), 6) for x in v]
+
+
+def embed_doc(text):
+    """The stored form of an item: a list of 384 numbers, or None if the model isn't available."""
+    model = _get_model()
+    if model is None or not text.strip():
+        return None
+    return _as_list(next(iter(model.embed([text]))))
+
+
+def embed_query(text):
+    """The form used for what someone types in the search box."""
+    model = _get_model()
+    if model is None or not text.strip():
+        return None
+    return _as_list(next(iter(model.query_embed([text]))))
+
+
+lexical_score = _lexical                     # word, plural and typo matching, 0..1

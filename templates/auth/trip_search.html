@@ -1,0 +1,27 @@
+{% extends "auth/base.html" %}
+{% block title %}Search · {{ trip.name }} · Unbox{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('trips') }}">Trips</a>
+  <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
+</div>
+<h1>Search</h1>
+<form method="get" action="{{ url_for('trip_search', tid=trip.id) }}" class="glass addbox" style="margin-top:8px">
+  <input name="q" value="{{ q }}" maxlength="100" placeholder="Try “something to drink from”" autocomplete="off" autofocus aria-label="Search this trip">
+  <button class="primary" type="submit">Search</button>
+</form>
+{% if q and not results %}<p class="muted">Nothing found for “{{ q }}”. Try another word.</p>{% endif %}
+{% if not q %}<p class="muted">It doesn't have to be the exact word: "cup" can find "travel mug".</p>{% endif %}
+{% if results %}
+<h2>{{ results|length }} result{{ '' if results|length == 1 else 's' }}</h2>
+<ul class="stack">
+{% for r in results %}{% set n = r.node %}
+  <li><a class="glass boxcard" href="{{ url_for('node_view', tid=trip.id, nid=n.id) }}">
+    <span class="thumbs one">{% if urls.get(n.photo_path) %}<img src="{{ urls[n.photo_path] }}" alt="">{% else %}<span class="emoji">{{ '📦' if n.is_box else '🔹' }}</span>{% endif %}</span>
+    <span class="txt"><strong>{{ n.name }}</strong><small>{{ r.path|join(' › ') if r.path else 'Top level of this trip' }}</small></span>
+    <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+  </a></li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

@@ -17,6 +17,7 @@ from functools import wraps
 from pathlib import Path
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+import search as searchlib
 from images import BadImage, clean_photo
 from sbclient import Supabase, SupabaseError
 
@@ -57,7 +58,7 @@ def safe_next(target, fallback):
     return fallback
 
 
-def create_app(sb=None, testing=False):
+def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
     load_dotenv()
     app = Flask(__name__)
     secret = os.environ.get("SECRET_KEY")
@@ -76,6 +77,16 @@ def create_app(sb=None, testing=False):
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     client = sb or Supabase()
     app.sb = client
+    make_doc_vector = embed_doc or searchlib.embed_doc          # tests pass simple stand-ins
+    make_query_vector = embed_query or searchlib.embed_query
+
+    if not testing and embed_doc is None:               # load the search model in the background so the first "Add" isn't slow
+        import threading
+        threading.Thread(target=searchlib._get_model, daemon=True).start()
+
+    def vector_text(vec):
+        """pgvector accepts a vector written as text: [0.1,0.2,...]"""
+        return "[" + ",".join(str(x) for x in vec) + "]"
 
     # ---------------- CSRF: every POST must carry the token that was put in the page ----------------
     def csrf_token():
@@ -474,7 +485,7 @@ def create_app(sb=None, testing=False):
             client.insert("nodes", token, {"id": nid, "trip_id": tid, "parent_id": parent_id,
                                            "is_box": request.form.get("kind") == "box", "name": name, "tags": tags,
                                            "description": description, "weight_kg": weight, "photo_path": path,
-                                           "position": len(siblings) + 1})
+                                           "position": len(siblings) + 1, **embedding_field(name, tags, description)})
         except SupabaseError:
             if path:                                              # don't leave an orphan photo behind
                 try:
@@ -485,6 +496,47 @@ def create_app(sb=None, testing=False):
             return redirect(back)
         flash(f"Added “{name}”.")
         return redirect(back)
+
+    def embedding_field(name, tags, description):
+        """{'embedding': '[...]'} when the model is available, else {} (search then uses words only)."""
+        try:
+            vec = make_doc_vector(f"{name} {tags} {description}")
+        except Exception:                      # a model problem must never stop someone adding an item
+            vec = None
+        return {"embedding": vector_text(vec)} if vec else {}
+
+    @app.route("/trips/<tid>/search")
+    @login_required
+    def trip_search(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        trip = get_trip(tid, token)
+        if not trip:
+            abort(404)
+        q = " ".join(request.args.get("q", "").split())[:100]
+        results, urls = [], {}
+        if q:
+            nodes = load_nodes(tid, token)
+            score = {}
+            for n in nodes:                                            # 1) words, plurals and typos
+                lex = searchlib.lexical_score(q, f"{n['name']} {n['tags']} {n['description']}")
+                if lex > 0:
+                    score[n["id"]] = 1.0 + lex
+            try:                                                       # 2) meaning (needs the model)
+                qv = make_query_vector(q)
+            except Exception:
+                qv = None
+            if qv:
+                rows = client.rpc("match_nodes", token, {"p_trip": tid, "p_query": vector_text(qv), "p_limit": 20}) or []
+                if rows:
+                    floor = max(searchlib.SEMANTIC_MIN, max(r["similarity"] for r in rows) - searchlib.SEMANTIC_BAND)
+                    for r in rows:
+                        if r["similarity"] >= floor:
+                            score[r["id"]] = score.get(r["id"], 0) + r["similarity"]
+            by_id = {n["id"]: n for n in nodes}
+            ranked = sorted((i for i in score if i in by_id), key=lambda i: -score[i])[:30]
+            results = [{"node": by_id[i], "path": [c["name"] for c in crumbs_for(nodes, by_id[i])]} for i in ranked]
+            urls = client.sign_many(BUCKET, [r["node"].get("photo_path") for r in results], token)
+        return render_template("auth/trip_search.html", trip=trip, q=q, results=results, urls=urls)
 
     @app.route("/trips/<tid>/n/<nid>/delete", methods=["POST"])
     @login_required

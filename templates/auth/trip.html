@@ -7,6 +7,10 @@
   {% for c in crumbs %}<a class="chip" href="{{ url_for('node_view', tid=trip.id, nid=c.id) }}">{{ c.name }}</a>{% endfor %}
 </div>
 
+<form method="get" action="{{ url_for('trip_search', tid=trip.id) }}" style="margin:6px 0 10px">
+  <input name="q" maxlength="100" placeholder="Search this trip…" autocomplete="off" aria-label="Search this trip">
+</form>
+
 {% if node and not node.is_box %}
   {# ---- one item ---- #}
   {% if urls.get(node.photo_path) %}<img class="hero" src="{{ urls[node.photo_path] }}" alt="{{ node.name }}">{% endif %}

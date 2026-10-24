@@ -175,3 +175,19 @@ class FakeSupabase:
     def list_folder(self, bucket, folder, token):
         uid = self._uid(token)
         return [p for p in self.storage if p.startswith(folder + "/") and self._may_touch(uid, p)]
+
+    # ---- database function used by search: cosine similarity between a query and each stored item, own trips only ----
+    def rpc(self, fn, token, args):
+        uid = self._uid(token)
+        assert fn == "match_nodes"
+        def parse(text):
+            return [float(x) for x in text.strip("[]").split(",")]
+        q = parse(args["p_query"])
+        out = []
+        for n in self._visible("nodes", uid):
+            if n["trip_id"] != args["p_trip"] or not n.get("embedding"):
+                continue
+            v = parse(n["embedding"])
+            sim = sum(a * b for a, b in zip(q, v))
+            out.append({"id": n["id"], "name": n["name"], "similarity": sim})
+        return sorted(out, key=lambda r: -r["similarity"])[: args["p_limit"]]

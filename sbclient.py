@@ -144,3 +144,7 @@ class Supabase:
             if len(rows) < 100:
                 return names
             offset += 100
+
+    def rpc(self, fn, token, args):
+        """Call a database function as the logged-in user (the row-level rules still apply)."""
+        return self._request("POST", f"/rest/v1/rpc/{fn}", token=token, json_body=args)

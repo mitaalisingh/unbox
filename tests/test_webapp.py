@@ -17,7 +17,8 @@ def fake():
 
 @pytest.fixture
 def app(fake):
-    return create_app(sb=fake, testing=True)
+    from tests.fake_embed import vec
+    return create_app(sb=fake, testing=True, embed_doc=vec, embed_query=vec)
 
 
 @pytest.fixture
@@ -441,3 +442,86 @@ def test_trip_pages_need_login(client):
     for path in ("/trips/00000000-0000-0000-0000-000000000000", "/trips/00000000-0000-0000-0000-000000000000/n/00000000-0000-0000-0000-000000000001"):
         assert client.get(path).status_code == 302
     assert client.post("/trips/00000000-0000-0000-0000-000000000000/add", data={}).status_code == 400   # no CSRF token
+
+
+# ================= search inside a trip =================
+def names(html):
+    import re as _re
+    return _re.findall(r"<strong>(.*?)</strong>", html)
+
+
+def stocked_trip(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Kitchen", "kind": "box"})
+    kitchen = fake.tables["nodes"][0]["id"]
+    add(client, tid, {"name": "Travel mug", "tags": "steel"}, parent=kitchen)
+    add(client, tid, {"name": "Desk lamp", "tags": "reading light"})
+    add(client, tid, {"name": "HDMI cable"})
+    add(client, tid, {"name": "Blue blanket"})
+    return tid
+
+
+def test_new_items_get_search_numbers_saved(client, fake):
+    stocked_trip(client, fake)
+    assert all(n.get("embedding", "").startswith("[") for n in fake.tables["nodes"])
+
+
+def test_search_finds_by_meaning_not_just_exact_words(client, fake):
+    tid = stocked_trip(client, fake)
+    html = client.get(f"/trips/{tid}/search?q=something+to+drink+from").get_data(as_text=True)
+    assert "Travel mug" in names(html)                      # "drink" and "mug" are different words with the same meaning
+    assert "Desk lamp" not in names(html) and "HDMI cable" not in names(html)
+
+
+def test_search_by_exact_word_and_typo(client, fake):
+    tid = stocked_trip(client, fake)
+    assert "Desk lamp" in names(client.get(f"/trips/{tid}/search?q=lamp").get_data(as_text=True))
+    assert "Blue blanket" in names(client.get(f"/trips/{tid}/search?q=blankt").get_data(as_text=True))     # typo
+
+
+def test_search_shows_where_the_item_is(client, fake):
+    tid = stocked_trip(client, fake)
+    html = client.get(f"/trips/{tid}/search?q=mug").get_data(as_text=True)
+    assert "Kitchen" in html                                 # its box, so you know where to look
+
+
+def test_search_with_nothing_found_or_nothing_typed(client, fake):
+    tid = stocked_trip(client, fake)
+    assert "Nothing found" in client.get(f"/trips/{tid}/search?q=zebra").get_data(as_text=True)
+    assert "doesn't have to be the exact word" in client.get(f"/trips/{tid}/search").get_data(as_text=True)
+    assert client.get(f"/trips/{tid}/search?q=" + "x" * 500).status_code == 200
+
+
+def test_search_only_covers_my_own_trip_and_other_users_get_nothing(client, app, fake):
+    tid = stocked_trip(client, fake)
+    other = app.test_client()
+    make_user(fake, "b@example.com")
+    login(other, "b@example.com")
+    assert other.get(f"/trips/{tid}/search?q=mug").status_code == 404
+    post(other, "/trips", {"name": "Bs trip"})
+    tid_b = [t["id"] for t in fake.tables["trips"] if t["name"] == "Bs trip"][0]
+    html = other.get(f"/trips/{tid_b}/search?q=mug").get_data(as_text=True)
+    assert "Travel mug" not in html                          # nothing of A's leaks into B's search
+
+
+def test_search_needs_login(client):
+    assert client.get("/trips/00000000-0000-0000-0000-000000000000/search?q=mug").status_code == 302
+
+
+def test_search_still_works_by_words_when_the_model_is_missing(fake):
+    app = create_app(sb=fake, testing=True, embed_doc=lambda t: None, embed_query=lambda t: None)
+    c = app.test_client()
+    tid = stocked_trip(c, fake)
+    assert not any(n.get("embedding") for n in fake.tables["nodes"])
+    assert "Desk lamp" in names(c.get(f"/trips/{tid}/search?q=lamp").get_data(as_text=True))
+
+
+def test_a_crashing_model_never_blocks_adding_items(fake):
+    def broken(_):
+        raise RuntimeError("model exploded")
+    app = create_app(sb=fake, testing=True, embed_doc=broken, embed_query=broken)
+    c = app.test_client()
+    tid = logged_in_trip(c, fake)
+    add(c, tid, {"name": "Mug"})
+    assert len(fake.tables["nodes"]) == 1
+    assert "Mug" in names(c.get(f"/trips/{tid}/search?q=mug").get_data(as_text=True))
