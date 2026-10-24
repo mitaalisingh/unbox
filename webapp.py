@@ -441,6 +441,17 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
             return None, "Weight must be between 0 and 1000 kg."
         return kg, None
 
+    def read_fields():
+        """The text fields shared by 'add' and 'edit', cleaned and checked. Returns (name, tags, note, kg, problem)."""
+        name = " ".join(request.form.get("name", "").split())
+        tags = " ".join(request.form.get("tags", "").split())
+        description = " ".join(request.form.get("description", "").split())
+        weight, werr = parse_weight(request.form.get("weight_kg"))
+        problem = ("Give it a name (up to 80 characters)." if not 1 <= len(name) <= 80 else
+                   "Tags can be up to 200 characters." if len(tags) > 200 else
+                   "The note can be up to 300 characters." if len(description) > 300 else werr)
+        return name, tags, description, weight, problem
+
     @app.route("/trips/<tid>/add", methods=["POST"])
     @login_required
     def add_node(tid):
@@ -454,13 +465,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
             if not parent or not parent[0]["is_box"]:
                 flash("Items can only be added inside a box.")
                 return redirect(url_for("trip_view", tid=tid))
-        name = " ".join(request.form.get("name", "").split())
-        tags = " ".join(request.form.get("tags", "").split())
-        description = " ".join(request.form.get("description", "").split())
-        weight, werr = parse_weight(request.form.get("weight_kg"))
-        problem = ("Give it a name (up to 80 characters)." if not 1 <= len(name) <= 80 else
-                   "Tags can be up to 200 characters." if len(tags) > 200 else
-                   "The note can be up to 300 characters." if len(description) > 300 else werr)
+        name, tags, description, weight, problem = read_fields()
         if problem:
             flash(problem)
             return redirect(back)
@@ -551,6 +556,83 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
             results = [{"node": by_id[i], "path": [c["name"] for c in crumbs_for(nodes, by_id[i])]} for i in ranked]
             urls = client.sign_many(BUCKET, [r["node"].get("photo_path") for r in results], token)
         return render_template("auth/trip_search.html", trip=trip, q=q, results=results, urls=urls)
+
+    @app.route("/trips/<tid>/n/<nid>/edit", methods=["GET", "POST"])
+    @login_required
+    def edit_node(tid, nid):
+        token, tid, nid = request.user["token"], trip_id_or_404(tid), trip_id_or_404(nid)
+        if not get_trip(tid, token):
+            abort(404)
+        nodes = load_nodes(tid, token)
+        node = next((n for n in nodes if n["id"] == nid), None)
+        if not node:
+            abort(404)
+        inside = descendants(nodes, nid)                      # a box can't be moved into itself or anything inside it
+        choices = [("", "Top level of the trip")] + [
+            (n["id"], " › ".join([c["name"] for c in crumbs_for(nodes, n)] + [n["name"]]))
+            for n in nodes if n["is_box"] and n["id"] not in inside]
+        edit_url = url_for("edit_node", tid=tid, nid=nid)
+        if request.method == "POST":
+            name, tags, description, weight, problem = read_fields()
+            new_parent = (request.form.get("parent_id") or "").strip() or None
+            if not problem and new_parent not in {c[0] or None for c in choices}:
+                problem = "You can't move it there."
+            if problem:
+                flash(problem)
+                return redirect(edit_url)
+            image = None
+            upload = request.files.get("photo")
+            if upload and upload.filename:
+                try:
+                    image = clean_photo(upload.read())        # checked and stripped BEFORE anything changes
+                except BadImage as e:
+                    flash(str(e))
+                    return redirect(edit_url)
+            photo_path = node.get("photo_path")
+            if request.form.get("remove_photo") and photo_path and not image:
+                try:                                           # file first: if this fails nothing changes
+                    client.remove(BUCKET, [photo_path], token)
+                except SupabaseError:
+                    flash("Couldn't remove the photo, so nothing was changed. Please try again.")
+                    return redirect(edit_url)
+                photo_path = None
+            if image:
+                path = f"{tid}/{nid}.jpg"                      # same place: the new photo replaces the old file
+                try:
+                    client.upload(BUCKET, path, token, image)
+                except SupabaseError as e:
+                    flash(str(e))
+                    return redirect(edit_url)
+                photo_path = path
+            changes = {"name": name, "tags": tags, "description": description, "weight_kg": weight,
+                       "photo_path": photo_path, "parent_id": new_parent,
+                       "embedding": embedding_field(name, tags, description).get("embedding")}   # refreshed; cleared if no model
+            if new_parent != node.get("parent_id"):
+                changes["position"] = len([n for n in nodes if n.get("parent_id") == new_parent]) + 1
+            try:
+                client.update("nodes", token, {"id": f"eq.{nid}", "trip_id": f"eq.{tid}"}, changes)
+            except SupabaseError:
+                flash("Couldn't save the changes. Please try again.")
+                return redirect(edit_url)
+            flash("Saved.")
+            return redirect(url_for("node_view", tid=tid, nid=nid))
+        urls = client.sign_many(BUCKET, [node.get("photo_path")], token)
+        return render_template("auth/edit_node.html", trip=get_trip(tid, token), node=node, crumbs=crumbs_for(nodes, node),
+                               choices=choices, urls=urls)
+
+    @app.route("/trips/<tid>/rename", methods=["POST"])
+    @login_required
+    def rename_trip(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        name = " ".join(request.form.get("name", "").split())
+        if not 1 <= len(name) <= 80:
+            flash("Give the trip a name (up to 80 characters).")
+        else:
+            client.update("trips", token, {"id": f"eq.{tid}"}, {"name": name})
+            flash("Trip renamed.")
+        return redirect(url_for("trip_view", tid=tid))
 
     @app.route("/trips/<tid>/n/<nid>/delete", methods=["POST"])
     @login_required

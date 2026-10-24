@@ -13,7 +13,7 @@ Unbox is a small web app for people who move house, hostel or city. Photograph t
 | | What it is | Status |
 |---|---|---|
 | **`app.py`** | The single-owner prototype: boxes inside boxes, photos, search, QR labels. Edited on your own computer. | Works. Used for a real move. |
-| **`webapp.py`** | The multi-user version on Supabase (Postgres, Auth, Storage): accounts, trips, boxes inside boxes, items, and private photos. | In progress. Editing, batch capture and sharing are not built yet. |
+| **`webapp.py`** | The multi-user version on Supabase (Postgres, Auth, Storage): accounts, trips, boxes inside boxes, items, and private photos. | In progress. Batch capture and sharing are not built yet. |
 
 ## The prototype (`app.py`)
 
@@ -46,11 +46,12 @@ What exists and has been tested against a real Supabase project:
 - **Boxes inside boxes, and items** with a name, tags, a note and a weight. Counts and known weights add up through nested boxes.
 - **Private photos:** location data (GPS) and all other hidden metadata are removed on upload, the picture is resized, and it is saved in a private bucket. Photos are shown through links that expire after an hour.
 - **Search inside a trip:** exact words, plurals and typos, plus search by meaning ("something to drink from" finds the mug). Meaning search uses a small open-source text model (`bge-small-en-v1.5`, 384 numbers per item) that runs on the server's CPU, and the comparison happens in Postgres with pgvector. Item text never leaves your own server. It does not look at photos.
+- **Editing:** rename a box or item, change its tags, note and weight, replace or remove its photo (removing deletes the file), move it into another box, and rename a trip. Edits refresh the item's search numbers.
 - **Delete means delete:** removing an item, a box or a trip also removes its photo files. If the files can't be removed, nothing is deleted.
 - **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
 - **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
 
-Automated tests (72, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
+Automated tests (94, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -63,7 +64,7 @@ To run it you need your own free Supabase project: apply `supabase/schema.sql` i
 DEV_HTTP=1 PORT=5050 python webapp.py     # open http://127.0.0.1:5050
 ```
 
-Not yet verified end to end: the password-reset email (Supabase's built-in email sender is limited to a few messages an hour on the free plan).
+The password-reset email works end to end, but Supabase's built-in email sender is limited to a few messages an hour on the free plan, so real users need an email provider of their own (see the roadmap).
 
 ## Roadmap
 
@@ -80,7 +81,7 @@ The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
 - [ ] Installable PWA, QR labels generated in-app
 - [x] Location data stripped from every uploaded photo
 - [x] Search inside a trip (by meaning, words and typos)
-- [ ] Editing boxes and items (rename, tags, weight, replace photo)
+- [x] Editing boxes and items (rename, tags, weight, replace or remove the photo, move between boxes) and renaming trips
 - [ ] Measure search quality on a real inventory (top-3 hit rate: keywords vs meaning) and tune the cutoff
 - [ ] A multilingual search model, since the current one is English only
 

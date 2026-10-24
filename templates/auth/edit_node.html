@@ -1,0 +1,28 @@
+{% extends "auth/base.html" %}
+{% block title %}Edit {{ node.name }} · Unbox{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('trips') }}">Trips</a>
+  <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
+  {% for c in crumbs %}<a class="chip" href="{{ url_for('node_view', tid=trip.id, nid=c.id) }}">{{ c.name }}</a>{% endfor %}
+  <a class="chip" href="{{ url_for('node_view', tid=trip.id, nid=node.id) }}">{{ node.name }}</a>
+</div>
+<h1>Edit</h1>
+{% if urls.get(node.photo_path) %}<img class="hero" src="{{ urls[node.photo_path] }}" alt="{{ node.name }}">{% endif %}
+<form method="post" enctype="multipart/form-data" class="glass addbox">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>Name <input name="name" value="{{ node.name }}" required maxlength="80" autocomplete="off"></label>
+  <label>Tags (helps search, e.g. cup, flask, steel) <input name="tags" value="{{ node.tags }}" maxlength="200" autocomplete="off"></label>
+  <label>Short note <input name="description" value="{{ node.description }}" maxlength="300" autocomplete="off"></label>
+  <label>Weight in kg <input name="weight_kg" value="{{ node.weight_kg if node.weight_kg is not none else '' }}" inputmode="decimal" autocomplete="off"></label>
+  <label>Lives in
+    <select name="parent_id">
+      {% for value, label in choices %}<option value="{{ value }}" {{ 'selected' if (value or None) == node.parent_id }}>{{ label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>{{ 'Replace photo' if node.photo_path else 'Add a photo' }} <input type="file" name="photo" accept="image/*"></label>
+  {% if node.photo_path %}<label class="check"><input type="checkbox" name="remove_photo"> Remove the photo (deletes the file for good)</label>{% endif %}
+  <p class="muted small">Location data is removed from photos when you upload them.</p>
+  <button class="primary" type="submit">Save</button>
+</form>
+{% endblock %}

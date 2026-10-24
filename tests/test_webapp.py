@@ -554,3 +554,175 @@ def test_catch_up_never_touches_other_peoples_items(client, app, fake):
     tid_b = [t["id"] for t in fake.tables["trips"] if t["name"] == "B trip"][0]
     other.get(f"/trips/{tid_b}/search?q=mug")
     assert not any(n.get("embedding") for n in fake.tables["nodes"] if n["trip_id"] == tid)
+
+
+# ================= editing =================
+def edit(client, tid, nid, data=None, photo=None, **kw):
+    form = {"csrf": csrf(client, f"/trips/{tid}/n/{nid}/edit")}
+    form.update(data or {})
+    if photo is not None:
+        form["photo"] = (io.BytesIO(photo), "new.jpg")
+    return client.post(f"/trips/{tid}/n/{nid}/edit", data=form, content_type="multipart/form-data", **kw)
+
+
+def node_named(fake, name):
+    return next(n for n in fake.tables["nodes"] if n["name"] == name)
+
+
+def full(**changes):
+    """A complete edit form, so a test only states what it wants to change."""
+    form = {"name": "Travel mug", "tags": "steel", "description": "", "weight_kg": "", "parent_id": ""}
+    form.update(changes)
+    return form
+
+
+def test_edit_changes_text_and_weight_and_can_clear_the_weight(client, fake):
+    tid = stocked_trip(client, fake)
+    mug = node_named(fake, "Travel mug")
+    edit(client, tid, mug["id"], full(name="Steel flask", tags="steel, thermos", description="from home", weight_kg="0.45", parent_id=mug["parent_id"]))
+    n = node_named(fake, "Steel flask")
+    assert (n["tags"], n["description"], n["weight_kg"]) == ("steel, thermos", "from home", 0.45)
+    edit(client, tid, n["id"], full(name="Steel flask", weight_kg="", parent_id=n["parent_id"]))
+    assert node_named(fake, "Steel flask")["weight_kg"] is None
+
+
+def test_edit_form_shows_current_values(client, fake):
+    tid = stocked_trip(client, fake)
+    mug = node_named(fake, "Travel mug")
+    html = client.get(f"/trips/{tid}/n/{mug['id']}/edit").get_data(as_text=True)
+    assert 'value="Travel mug"' in html and 'value="steel"' in html
+    assert "Remove the photo" not in html                    # it has no photo, so no remove option
+
+
+def test_editing_the_name_refreshes_search_by_meaning(client, fake):
+    tid = stocked_trip(client, fake)
+    mug = node_named(fake, "Travel mug")
+    assert "Travel mug" not in names(client.get(f"/trips/{tid}/search?q=bulb").get_data(as_text=True))
+    edit(client, tid, mug["id"], full(name="Reading bulb", tags="", parent_id=mug["parent_id"]))
+    assert "Reading bulb" in names(client.get(f"/trips/{tid}/search?q=lighting").get_data(as_text=True))     # its meaning changed
+    assert "Reading bulb" not in names(client.get(f"/trips/{tid}/search?q=something+to+drink+from").get_data(as_text=True))
+
+
+def test_editing_without_a_model_clears_stale_search_numbers(fake):
+    app = create_app(sb=fake, testing=True, embed_doc=lambda t: None, embed_query=lambda t: None)
+    c = app.test_client()
+    tid = logged_in_trip(c, fake)
+    add(c, tid, {"name": "Mug"})
+    n = fake.tables["nodes"][0]
+    n["embedding"] = "[1.0]"                                 # pretend an older version stored numbers
+    edit(c, tid, n["id"], full(name="Lamp", tags="", parent_id=""))
+    assert fake.tables["nodes"][0]["embedding"] is None      # cleared, so the catch-up recomputes them later
+
+
+def test_replacing_a_photo_stores_a_clean_one_in_the_same_place(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps(size=(400, 300), orientation=1))
+    n = fake.tables["nodes"][0]
+    old = fake.storage[n["photo_path"]]
+    edit(client, tid, n["id"], full(name="Lamp", tags="", parent_id=""), photo=photo_with_gps(size=(800, 500), orientation=1))
+    new = fake.storage[n["photo_path"]]
+    assert len(fake.storage) == 1 and new != old             # replaced, not duplicated
+    assert Image.open(io.BytesIO(new)).size == (800, 500)
+    assert dict(Image.open(io.BytesIO(new)).getexif()) == {} and b"SecretPhoneMaker" not in new
+
+
+def test_a_bad_new_photo_changes_nothing(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps(size=(300, 200), orientation=1))
+    n = dict(fake.tables["nodes"][0])
+    before = fake.storage[n["photo_path"]]
+    edit(client, tid, n["id"], full(name="Renamed", tags="x", parent_id=""), photo=b"not a photo")
+    assert node_named(fake, "Lamp")["tags"] == "" and fake.storage[n["photo_path"]] == before
+
+
+def test_removing_a_photo_deletes_the_file(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps())
+    n = fake.tables["nodes"][0]
+    edit(client, tid, n["id"], full(name="Lamp", tags="", parent_id="", remove_photo="on"))
+    assert fake.tables["nodes"][0]["photo_path"] is None and fake.storage == {}
+
+
+def test_if_the_photo_cannot_be_removed_nothing_is_changed(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps())
+    n = fake.tables["nodes"][0]
+    fake.fail_remove = True
+    edit(client, tid, n["id"], full(name="New name", tags="", parent_id="", remove_photo="on"))
+    assert fake.tables["nodes"][0]["name"] == "Lamp" and fake.tables["nodes"][0]["photo_path"] and len(fake.storage) == 1
+
+
+def test_move_an_item_into_a_box_and_back_to_the_top(client, fake):
+    tid = stocked_trip(client, fake)
+    kitchen, lamp = node_named(fake, "Kitchen"), node_named(fake, "Desk lamp")
+    edit(client, tid, lamp["id"], full(name="Desk lamp", tags="reading light", parent_id=kitchen["id"]))
+    assert node_named(fake, "Desk lamp")["parent_id"] == kitchen["id"]
+    assert "Desk lamp" in names(client.get(f"/trips/{tid}/n/{kitchen['id']}").get_data(as_text=True))
+    edit(client, tid, lamp["id"], full(name="Desk lamp", tags="reading light", parent_id=""))
+    assert node_named(fake, "Desk lamp")["parent_id"] is None
+
+
+def test_a_box_cannot_be_moved_into_itself_or_its_own_contents(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Big", "kind": "box"})
+    big = fake.tables["nodes"][0]["id"]
+    add(client, tid, {"name": "Small", "kind": "box"}, parent=big)
+    small = fake.tables["nodes"][1]["id"]
+    edit(client, tid, big, full(name="Big", tags="", parent_id=big))
+    edit(client, tid, big, full(name="Big", tags="", parent_id=small))
+    assert node_named(fake, "Big")["parent_id"] is None
+    html = client.get(f"/trips/{tid}/n/{big}/edit").get_data(as_text=True)
+    assert "Small</option>" not in html and f'value="{big}"' not in html          # not even offered as a choice
+
+
+def test_items_cannot_be_moved_into_an_item_or_a_made_up_place(client, fake):
+    tid = stocked_trip(client, fake)
+    lamp, cable = node_named(fake, "Desk lamp"), node_named(fake, "HDMI cable")
+    edit(client, tid, lamp["id"], full(name="Desk lamp", tags="reading light", parent_id=cable["id"]))
+    edit(client, tid, lamp["id"], full(name="Desk lamp", tags="reading light", parent_id="00000000-0000-0000-0000-000000000000"))
+    assert node_named(fake, "Desk lamp")["parent_id"] is None
+
+
+def test_another_user_cannot_open_or_change_my_items(client, app, fake):
+    tid = stocked_trip(client, fake)
+    mug = node_named(fake, "Travel mug")
+    other = app.test_client()
+    make_user(fake, "b@example.com")
+    login(other, "b@example.com")
+    assert other.get(f"/trips/{tid}/n/{mug['id']}/edit").status_code == 404
+    assert edit(other, tid, mug["id"], full(name="Hacked")).status_code == 404
+    assert node_named(fake, "Travel mug")["name"] == "Travel mug"
+
+
+@pytest.mark.parametrize("data", [{"name": ""}, {"name": "x" * 81}, {"tags": "t" * 201}, {"description": "d" * 301},
+                                  {"weight_kg": "abc"}, {"weight_kg": "-1"}, {"weight_kg": "1001"}])
+def test_edit_validation(client, fake, data):
+    tid = stocked_trip(client, fake)
+    mug = node_named(fake, "Travel mug")
+    edit(client, tid, mug["id"], full(parent_id=mug["parent_id"], **data))
+    assert node_named(fake, "Travel mug")["tags"] == "steel"
+
+
+def test_edit_needs_login_and_a_form_token(client, fake):
+    assert client.get("/trips/00000000-0000-0000-0000-000000000000/n/00000000-0000-0000-0000-000000000001/edit").status_code == 302
+    tid = stocked_trip(client, fake)
+    mug = node_named(fake, "Travel mug")
+    assert client.post(f"/trips/{tid}/n/{mug['id']}/edit", data={"name": "x"}).status_code == 400
+
+
+def test_rename_a_trip(client, fake):
+    tid = logged_in_trip(client, fake, name="Old name")
+    post(client, f"/trips/{tid}/rename", {"name": "  New   name "})
+    assert fake.tables["trips"][0]["name"] == "New name"
+    post(client, f"/trips/{tid}/rename", {"name": ""})
+    post(client, f"/trips/{tid}/rename", {"name": "x" * 81})
+    assert fake.tables["trips"][0]["name"] == "New name"
+
+
+def test_only_the_owner_can_rename_a_trip(client, app, fake):
+    tid = logged_in_trip(client, fake, name="Mine")
+    other = app.test_client()
+    make_user(fake, "b@example.com")
+    login(other, "b@example.com")
+    assert post(other, f"/trips/{tid}/rename", {"name": "Stolen"}).status_code == 404
+    assert fake.tables["trips"][0]["name"] == "Mine"

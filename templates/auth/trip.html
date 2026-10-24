@@ -20,6 +20,7 @@
     {% if node.tags %}<span class="chip">{{ node.tags }}</span>{% endif %}
   </div>
   {% if node.description %}<p class="lead">{{ node.description }}</p>{% endif %}
+  <p><a class="chip solid" href="{{ url_for('edit_node', tid=trip.id, nid=node.id) }}">✎ Edit</a></p>
 {% else %}
   {# ---- the trip's top level, or one box ---- #}
   {% if node and urls.get(node.photo_path) %}<img class="hero" src="{{ urls[node.photo_path] }}" alt="{{ node.name }}">{% endif %}
@@ -30,6 +31,7 @@
     {% if node and node.weight_kg is not none %}<span class="chip">box: {{ node.weight_kg }} kg</span>{% endif %}
   </div>
   {% if node and node.description %}<p class="lead">{{ node.description }}</p>{% endif %}
+  {% if node %}<p><a class="chip solid" href="{{ url_for('edit_node', tid=trip.id, nid=node.id) }}">✎ Edit this box</a></p>{% endif %}
 
   {% if boxes %}
   <ul class="stack">
@@ -71,6 +73,17 @@
       <button class="primary" type="submit">Add</button>
     </form>
   </details>
+{% endif %}
+
+{% if not node %}
+<details class="glass addbox">
+  <summary>Rename this trip</summary>
+  <form method="post" action="{{ url_for('rename_trip', tid=trip.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label>Trip name <input name="name" value="{{ trip.name }}" required maxlength="80" autocomplete="off"></label>
+    <button class="primary" type="submit">Save name</button>
+  </form>
+</details>
 {% endif %}
 
 {% if node %}
