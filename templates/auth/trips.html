@@ -12,7 +12,7 @@
 <ul class="stack">
 {% for t in active %}
   <li class="glass boxcard" style="flex-wrap:wrap">
-    <span class="txt"><strong>{{ t['name'] }}</strong><small>Created {{ t['created_at'][:10] }}</small></span>
+    <a class="txt" href="{{ url_for('trip_view', tid=t['id']) }}" style="color:inherit"><strong>{{ t['name'] }}</strong><small>Created {{ t['created_at'][:10] }} · open</small></a>
     <form method="post" action="{{ url_for('archive_trip', tid=t['id']) }}" style="margin:0">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="back" type="submit">Archive</button></form>
     <form method="post" action="{{ url_for('delete_trip', tid=t['id']) }}" style="margin:0;width:100%" onsubmit="return confirm('Delete this trip and everything in it for good?')">

@@ -17,10 +17,12 @@ from functools import wraps
 from pathlib import Path
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+from images import BadImage, clean_photo
 from sbclient import Supabase, SupabaseError
 
 EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD = 10
+BUCKET = "photos"
 
 
 def load_dotenv(path=".env"):
@@ -67,7 +69,7 @@ def create_app(sb=None, testing=False):
     app.config.update(
         SECRET_KEY=secret, TESTING=testing,
         SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=not dev_http,
-        PERMANENT_SESSION_LIFETIME=14 * 24 * 3600, MAX_CONTENT_LENGTH=1024 * 1024,
+        PERMANENT_SESSION_LIFETIME=14 * 24 * 3600, MAX_CONTENT_LENGTH=25 * 1024 * 1024,
     )
     if os.environ.get("BEHIND_PROXY") == "1":
         from werkzeug.middleware.proxy_fix import ProxyFix
@@ -328,10 +330,183 @@ def create_app(sb=None, testing=False):
         if not request.form.get("sure"):
             flash("Tick the box to confirm. Deleting a trip can't be undone.")
             return redirect(url_for("trips"))
-        # TODO (photos step): also delete this trip's files from storage. Rows cascade, files do not.
-        client.delete("trips", request.user["token"], {"id": f"eq.{trip_id_or_404(tid)}"})
-        flash("Trip deleted for good.")
+        tid = trip_id_or_404(tid)
+        token = request.user["token"]
+        if not get_trip(tid, token):
+            abort(404)
+        try:                                         # files first: if this fails, nothing is deleted and nothing is left behind
+            client.remove(BUCKET, client.list_folder(BUCKET, tid, token), token)
+        except SupabaseError:
+            flash("Couldn't delete the photos, so nothing was deleted. Please try again.")
+            return redirect(url_for("trips"))
+        client.delete("trips", token, {"id": f"eq.{tid}"})
+        flash("Trip deleted for good, including its photos.")
         return redirect(url_for("trips"))
+
+
+    # ---------------- boxes and items inside a trip ----------------
+    NODE_COLUMNS = "id,trip_id,parent_id,is_box,name,description,tags,weight_kg,photo_path,position"
+
+    def get_trip(tid, token):
+        rows = client.select("trips", token, {"select": "id,name,archived_at", "id": f"eq.{tid}"})
+        return rows[0] if rows else None
+
+    def load_nodes(tid, token):
+        rows = client.select("nodes", token, {"select": NODE_COLUMNS, "trip_id": f"eq.{tid}"})
+        return sorted(rows, key=lambda n: (n.get("position") or 0, n["name"].lower()))
+
+    def descendants(nodes, nid):
+        """ids of nid and everything inside it, however deep."""
+        found, stack = {nid}, [nid]
+        while stack:
+            cur = stack.pop()
+            for n in nodes:
+                if n.get("parent_id") == cur and n["id"] not in found:
+                    found.add(n["id"])
+                    stack.append(n["id"])
+        return found
+
+    def rollup(nodes, nid):
+        """(number of items, total known weight in kg) inside box nid, including nested boxes."""
+        ids = descendants(nodes, nid) - {nid}
+        inside = [n for n in nodes if n["id"] in ids]
+        return (sum(1 for n in inside if not n["is_box"]),
+                round(sum(float(n["weight_kg"]) for n in inside if not n["is_box"] and n.get("weight_kg") is not None), 2))
+
+    def crumbs_for(nodes, node):
+        by_id, chain, cur = {n["id"]: n for n in nodes}, [], node
+        while cur and cur.get("parent_id") in by_id:
+            cur = by_id[cur["parent_id"]]
+            chain.append(cur)
+        return list(reversed(chain))
+
+    def view_trip(tid, nid):
+        token = request.user["token"]
+        tid = trip_id_or_404(tid)
+        trip = get_trip(tid, token)
+        if not trip:
+            abort(404)                                           # someone else's trip looks exactly like a missing one
+        nodes = load_nodes(tid, token)
+        node = None
+        if nid:
+            node = next((n for n in nodes if n["id"] == trip_id_or_404(nid)), None)
+            if not node:
+                abort(404)
+        parent = node["id"] if node else None
+        kids = [n for n in nodes if n.get("parent_id") == parent] if (not node or node["is_box"]) else []
+        shown = kids + ([node] if node else [])
+        urls = client.sign_many(BUCKET, [n.get("photo_path") for n in shown], token)
+        stats = {n["id"]: rollup(nodes, n["id"]) for n in kids if n["is_box"]}
+        if node is None:                                          # the trip's top level: everything in the trip
+            known = [float(n["weight_kg"]) for n in nodes if not n["is_box"] and n.get("weight_kg") is not None]
+            total_items, total_kg = sum(1 for n in nodes if not n["is_box"]), round(sum(known), 2)
+        elif node["is_box"]:
+            total_items, total_kg = rollup(nodes, node["id"])
+        else:
+            total_items, total_kg = 0, 0
+        return render_template("auth/trip.html", trip=trip, node=node, crumbs=crumbs_for(nodes, node) if node else [],
+                               boxes=[n for n in kids if n["is_box"]], items=[n for n in kids if not n["is_box"]],
+                               urls=urls, stats=stats, total_items=total_items, total_kg=total_kg)
+
+    @app.route("/trips/<tid>")
+    @login_required
+    def trip_view(tid):
+        return view_trip(tid, None)
+
+    @app.route("/trips/<tid>/n/<nid>")
+    @login_required
+    def node_view(tid, nid):
+        return view_trip(tid, nid)
+
+    def parse_weight(raw):
+        raw = (raw or "").strip().replace(",", ".")
+        if not raw:
+            return None, None
+        try:
+            kg = round(float(raw), 2)
+        except ValueError:
+            return None, "Weight must be a number, like 1.5."
+        if not 0 <= kg <= 1000:
+            return None, "Weight must be between 0 and 1000 kg."
+        return kg, None
+
+    @app.route("/trips/<tid>/add", methods=["POST"])
+    @login_required
+    def add_node(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        parent_id = (request.form.get("parent_id") or "").strip() or None
+        back = url_for("node_view", tid=tid, nid=parent_id) if parent_id else url_for("trip_view", tid=tid)
+        if parent_id:
+            parent = client.select("nodes", token, {"select": "id,is_box", "id": f"eq.{trip_id_or_404(parent_id)}", "trip_id": f"eq.{tid}"})
+            if not parent or not parent[0]["is_box"]:
+                flash("Items can only be added inside a box.")
+                return redirect(url_for("trip_view", tid=tid))
+        name = " ".join(request.form.get("name", "").split())
+        tags = " ".join(request.form.get("tags", "").split())
+        description = " ".join(request.form.get("description", "").split())
+        weight, werr = parse_weight(request.form.get("weight_kg"))
+        problem = ("Give it a name (up to 80 characters)." if not 1 <= len(name) <= 80 else
+                   "Tags can be up to 200 characters." if len(tags) > 200 else
+                   "The note can be up to 300 characters." if len(description) > 300 else werr)
+        if problem:
+            flash(problem)
+            return redirect(back)
+        photo = request.files.get("photo")
+        image = None
+        if photo and photo.filename:
+            try:
+                image = clean_photo(photo.read())                 # validated and stripped BEFORE anything is saved
+            except BadImage as e:
+                flash(str(e))
+                return redirect(back)
+        nid = str(uuid.uuid4())
+        path = f"{tid}/{nid}.jpg" if image else None
+        if image:
+            try:
+                client.upload(BUCKET, path, token, image)
+            except SupabaseError as e:
+                flash(str(e))
+                return redirect(back)
+        siblings = client.select("nodes", token, {"select": "id", "trip_id": f"eq.{tid}", "parent_id": f"eq.{parent_id}" if parent_id else "is.null"})
+        try:
+            client.insert("nodes", token, {"id": nid, "trip_id": tid, "parent_id": parent_id,
+                                           "is_box": request.form.get("kind") == "box", "name": name, "tags": tags,
+                                           "description": description, "weight_kg": weight, "photo_path": path,
+                                           "position": len(siblings) + 1})
+        except SupabaseError:
+            if path:                                              # don't leave an orphan photo behind
+                try:
+                    client.remove(BUCKET, [path], token)
+                except SupabaseError:
+                    pass
+            flash("Couldn't save that. Please try again.")
+            return redirect(back)
+        flash(f"Added “{name}”.")
+        return redirect(back)
+
+    @app.route("/trips/<tid>/n/<nid>/delete", methods=["POST"])
+    @login_required
+    def delete_node(tid, nid):
+        token, tid, nid = request.user["token"], trip_id_or_404(tid), trip_id_or_404(nid)
+        if not get_trip(tid, token):
+            abort(404)
+        nodes = load_nodes(tid, token)
+        node = next((n for n in nodes if n["id"] == nid), None)
+        if not node:
+            abort(404)
+        gone = descendants(nodes, nid)
+        paths = [n["photo_path"] for n in nodes if n["id"] in gone and n.get("photo_path")]
+        try:                                                      # files first; if it fails nothing is deleted
+            client.remove(BUCKET, paths, token)
+        except SupabaseError:
+            flash("Couldn't delete the photos, so nothing was deleted. Please try again.")
+            return redirect(url_for("node_view", tid=tid, nid=nid))
+        client.delete("nodes", token, {"id": f"eq.{nid}", "trip_id": f"eq.{tid}"})
+        flash(f"Deleted “{node['name']}”" + (f" and {len(gone) - 1} thing(s) inside it." if len(gone) > 1 else "."))
+        parent = node.get("parent_id")
+        return redirect(url_for("node_view", tid=tid, nid=parent) if parent else url_for("trip_view", tid=tid))
 
     return app
 

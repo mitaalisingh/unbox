@@ -16,7 +16,10 @@ class FakeSupabase:
         self.users = {}                    # email -> {id, password, confirmed, meta}
         self.tokens = {}                   # access token -> user id
         self.refresh_tokens = {}           # refresh token -> user id
-        self.tables = {"profiles": [], "trips": []}
+        self.tables = {"profiles": [], "trips": [], "nodes": []}
+        self.storage = {}                  # path -> bytes (the private photo bucket)
+        self.uploads, self.removed = [], []   # what the app uploaded / removed, in order
+        self.fail_remove = False
         self.tokens_used = []              # every token the app sent to the database
         self.recover_calls, self.signup_calls = [], []
         self.fail_refresh = False
@@ -79,7 +82,12 @@ class FakeSupabase:
 
     # ---- Database with "row-level rules": a row is visible only to its owner ----
     def _owner_of(self, table, row):
-        return row.get("owner_id") if table == "trips" else row.get("user_id")
+        if table == "trips":
+            return row.get("owner_id")
+        if table == "nodes":
+            trip = next((t for t in self.tables["trips"] if t["id"] == row.get("trip_id")), None)
+            return trip["owner_id"] if trip else None
+        return row.get("user_id")
 
     def _visible(self, table, uid):
         return [r for r in self.tables[table] if self._owner_of(table, r) == uid]
@@ -90,6 +98,8 @@ class FakeSupabase:
             if k in ("select", "order"):
                 continue
             if v.startswith("eq.") and str(row.get(k)) != v[3:]:
+                return False
+            if v == "is.null" and row.get(k) is not None:
                 return False
         return True
 
@@ -102,6 +112,8 @@ class FakeSupabase:
         if self._owner_of(table, row) != uid:
             raise SupabaseError("Something went wrong. Please try again.", 403)       # the "with check" rule
         row = dict(row)
+        if table == "nodes":
+            row.setdefault("id", str(uuid.uuid4()))
         if table == "trips":
             row.setdefault("id", str(uuid.uuid4()))
             row.setdefault("created_at", "2026-10-24T10:00:00+00:00")
@@ -122,3 +134,44 @@ class FakeSupabase:
         uid = self._uid(token)
         mine = [r for r in self._visible(table, uid) if self._matches(r, match)]
         self.tables[table] = [r for r in self.tables[table] if r not in mine]
+        if table == "trips":
+            gone = {t["id"] for t in mine}
+            self.tables["nodes"] = [n for n in self.tables["nodes"] if n["trip_id"] not in gone]
+        if table == "nodes":
+            doomed = {n["id"] for n in mine}
+            grew = True
+            while grew:
+                kids = {n["id"] for n in self.tables["nodes"] if n.get("parent_id") in doomed} - doomed
+                grew = bool(kids)
+                doomed |= kids
+            self.tables["nodes"] = [n for n in self.tables["nodes"] if n["id"] not in doomed]
+
+    # ---- Storage: the first folder in a path is a trip id, and only that trip's owner may touch it ----
+    def _may_touch(self, uid, path):
+        trip_id = path.split("/")[0]
+        return any(t["id"] == trip_id and t["owner_id"] == uid for t in self.tables["trips"])
+
+    def upload(self, bucket, path, token, data, content_type="image/jpeg"):
+        uid = self._uid(token)
+        if bucket != "photos" or not self._may_touch(uid, path):
+            raise SupabaseError("The photo couldn't be saved. Please try again.", 403)
+        self.storage[path] = data
+        self.uploads.append(path)
+
+    def sign_many(self, bucket, paths, token, expires=3600):
+        uid = self._uid(token)
+        return {p: f"https://files.example/{p}?token=short-lived" for p in paths
+                if p and p in self.storage and self._may_touch(uid, p)}
+
+    def remove(self, bucket, paths, token):
+        uid = self._uid(token)
+        if self.fail_remove:
+            raise SupabaseError("Something went wrong. Please try again.", 500)
+        for p in paths:
+            if self._may_touch(uid, p):
+                self.storage.pop(p, None)
+                self.removed.append(p)
+
+    def list_folder(self, bucket, folder, token):
+        uid = self._uid(token)
+        return [p for p in self.storage if p.startswith(folder + "/") and self._may_touch(uid, p)]

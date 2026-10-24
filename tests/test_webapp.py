@@ -283,3 +283,161 @@ def test_public_pages_work(client):
     for path in ("/", "/privacy", "/signup", "/login", "/forgot"):
         assert client.get(path).status_code == 200
     assert "Draft" in client.get("/privacy").get_data(as_text=True).replace('&#39;', "'")
+
+
+# ================= boxes, items and photos =================
+from tests.test_images import photo_with_gps   # noqa: E402
+from PIL import Image                          # noqa: E402
+import io                                      # noqa: E402
+
+
+def logged_in_trip(client, fake, email="a@example.com", name="Move"):
+    make_user(fake, email)
+    login(client, email)
+    post(client, "/trips", {"name": name})
+    return [t for t in fake.tables["trips"] if t["name"] == name][-1]["id"]
+
+
+def add(client, tid, data, photo=None, parent=""):
+    form = {"csrf": csrf(client, f"/trips/{tid}"), "parent_id": parent, "kind": "item"}
+    form.update(data)
+    if photo is not None:
+        form["photo"] = (io.BytesIO(photo), "pic.jpg")
+    return client.post(f"/trips/{tid}/add", data=form, content_type="multipart/form-data")
+
+
+def test_add_box_then_item_inside_and_totals_roll_up(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Kitchen", "kind": "box"})
+    box = fake.tables["nodes"][0]
+    add(client, tid, {"name": "Mug", "weight_kg": "0.4"}, parent=box["id"])
+    add(client, tid, {"name": "Pan", "weight_kg": "1,1"}, parent=box["id"])         # a comma decimal is accepted
+    page = client.get(f"/trips/{tid}").get_data(as_text=True)
+    assert "Kitchen" in page and "2 items" in page and "1.5 kg known" in page
+    box_page = client.get(f"/trips/{tid}/n/{box['id']}").get_data(as_text=True)
+    assert "Mug" in box_page and "Pan" in box_page and "2 items" in box_page
+
+
+def test_nesting_boxes_in_boxes(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Big", "kind": "box"})
+    big = fake.tables["nodes"][0]["id"]
+    add(client, tid, {"name": "Small", "kind": "box"}, parent=big)
+    small = fake.tables["nodes"][1]["id"]
+    add(client, tid, {"name": "Spoon"}, parent=small)
+    page = client.get(f"/trips/{tid}/n/{small}").get_data(as_text=True)
+    assert "Big" in page and "Spoon" in page                                           # breadcrumb shows the parent box
+    assert "1 item" in client.get(f"/trips/{tid}/n/{big}").get_data(as_text=True)      # counts include nested boxes
+
+
+def test_photo_is_cleaned_stored_privately_and_shown_by_short_lived_link(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps())
+    node = fake.tables["nodes"][0]
+    assert node["photo_path"] == f"{tid}/{node['id']}.jpg"
+    stored = fake.storage[node["photo_path"]]
+    img = Image.open(io.BytesIO(stored))
+    assert dict(img.getexif()) == {} and b"SecretPhoneMaker" not in stored and b"Exif" not in stored    # location is gone
+    assert max(img.size) <= 1400
+    page = client.get(f"/trips/{tid}").get_data(as_text=True)
+    assert f"https://files.example/{node['photo_path']}?token=short-lived" in page
+
+
+def test_bad_uploads_are_refused_and_nothing_is_saved(client, fake):
+    tid = logged_in_trip(client, fake)
+    r = add(client, tid, {"name": "Fake"}, photo=b"<html>not a photo</html>")
+    assert r.status_code == 302
+    assert fake.tables["nodes"] == [] and fake.storage == {}
+
+
+@pytest.mark.parametrize("data", [{"name": ""}, {"name": "x" * 81}, {"name": "ok", "weight_kg": "abc"}, {"name": "ok", "weight_kg": "-3"},
+                                  {"name": "ok", "weight_kg": "5000"}, {"name": "ok", "tags": "t" * 201}, {"name": "ok", "description": "d" * 301}])
+def test_item_field_validation(client, fake, data):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, data)
+    assert fake.tables["nodes"] == []
+
+
+def test_items_cannot_go_inside_an_item_or_a_foreign_node(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Mug"})
+    mug = fake.tables["nodes"][0]["id"]
+    add(client, tid, {"name": "Inside a mug?"}, parent=mug)
+    assert len(fake.tables["nodes"]) == 1
+
+
+def test_failed_save_removes_the_uploaded_photo(client, fake, monkeypatch):
+    tid = logged_in_trip(client, fake)
+    def boom(*a, **k):
+        from sbclient import SupabaseError
+        raise SupabaseError("db down", 500)
+    monkeypatch.setattr(fake, "insert", boom)
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps())
+    assert fake.storage == {} and len(fake.uploads) == 1 and len(fake.removed) == 1
+
+
+def test_another_user_cannot_view_add_to_or_delete_in_my_trip(client, app, fake):
+    tid = logged_in_trip(client, fake, "a@example.com")
+    add(client, tid, {"name": "Secret box", "kind": "box"}, photo=photo_with_gps())
+    nid = fake.tables["nodes"][0]["id"]
+    other = app.test_client()
+    make_user(fake, "b@example.com")
+    login(other, "b@example.com")
+    assert other.get(f"/trips/{tid}").status_code == 404
+    assert other.get(f"/trips/{tid}/n/{nid}").status_code == 404
+    assert add(other, tid, {"name": "Intruder"}).status_code == 404
+    other_csrf = csrf(other, "/trips")
+    assert other.post(f"/trips/{tid}/n/{nid}/delete", data={"csrf": other_csrf}).status_code == 404
+    assert other.post(f"/trips/{tid}/delete", data={"csrf": other_csrf, "sure": "on"}).status_code == 404
+    assert len(fake.tables["nodes"]) == 1 and len(fake.storage) == 1 and len(fake.tables["trips"]) == 1
+
+
+def test_deleting_a_box_deletes_everything_inside_and_all_their_photos(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Big", "kind": "box"}, photo=photo_with_gps())
+    big = fake.tables["nodes"][0]["id"]
+    add(client, tid, {"name": "Small", "kind": "box"}, photo=photo_with_gps(), parent=big)
+    small = fake.tables["nodes"][1]["id"]
+    add(client, tid, {"name": "Spoon"}, photo=photo_with_gps(), parent=small)
+    add(client, tid, {"name": "Keeper"}, photo=photo_with_gps())                        # outside the box: must survive
+    assert len(fake.storage) == 4
+    r = post(client, f"/trips/{tid}/n/{big}/delete", {"csrf": csrf(client, f"/trips/{tid}")})
+    assert r.status_code == 302
+    assert [n["name"] for n in fake.tables["nodes"]] == ["Keeper"]
+    assert len(fake.storage) == 1 and list(fake.storage)[0].endswith(f"{fake.tables['nodes'][0]['id']}.jpg")
+
+
+def test_if_file_deletion_fails_nothing_is_deleted(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps())
+    nid = fake.tables["nodes"][0]["id"]
+    fake.fail_remove = True
+    post(client, f"/trips/{tid}/n/{nid}/delete", {"csrf": csrf(client, f"/trips/{tid}")})
+    assert len(fake.tables["nodes"]) == 1 and len(fake.storage) == 1               # no half-deleted state
+
+
+def test_deleting_a_trip_deletes_all_its_photos(client, fake):
+    tid = logged_in_trip(client, fake, name="First")
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps())
+    add(client, tid, {"name": "Mug"}, photo=photo_with_gps())
+    post(client, "/trips", {"name": "Second"})
+    tid2 = [t["id"] for t in fake.tables["trips"] if t["name"] == "Second"][0]
+    add(client, tid2, {"name": "Other"}, photo=photo_with_gps())
+    assert len(fake.storage) == 3
+    post(client, f"/trips/{tid}/delete", {"csrf": csrf(client, "/trips"), "sure": "on"})
+    assert [t["name"] for t in fake.tables["trips"]] == ["Second"]
+    assert len(fake.storage) == 1 and all(p.startswith(tid2) for p in fake.storage)
+
+
+def test_failed_photo_cleanup_keeps_the_trip(client, fake):
+    tid = logged_in_trip(client, fake)
+    add(client, tid, {"name": "Lamp"}, photo=photo_with_gps())
+    fake.fail_remove = True
+    post(client, f"/trips/{tid}/delete", {"csrf": csrf(client, "/trips"), "sure": "on"})
+    assert len(fake.tables["trips"]) == 1 and len(fake.storage) == 1
+
+
+def test_trip_pages_need_login(client):
+    for path in ("/trips/00000000-0000-0000-0000-000000000000", "/trips/00000000-0000-0000-0000-000000000000/n/00000000-0000-0000-0000-000000000001"):
+        assert client.get(path).status_code == 302
+    assert client.post("/trips/00000000-0000-0000-0000-000000000000/add", data={}).status_code == 400   # no CSRF token

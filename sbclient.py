@@ -106,3 +106,41 @@ class Supabase:
 
     def delete(self, table, token, match):
         return self._request("DELETE", f"/rest/v1/{table}", token=token, params=match)
+
+    # ---- Storage (photos), as the logged-in user: the bucket's own rules limit them to their own trip folders ----
+    def upload(self, bucket, path, token, data, content_type="image/jpeg"):
+        headers = {"apikey": self.public_key, "Authorization": f"Bearer {token}", "Content-Type": content_type, "x-upsert": "true"}
+        try:
+            r = self._http.post(f"{self.url}/storage/v1/object/{bucket}/{path}", headers=headers, content=data)
+        except httpx.HTTPError:
+            raise SupabaseError("We couldn't reach the server. Please try again.") from None
+        if r.status_code >= 400:
+            raise SupabaseError("The photo couldn't be saved. Please try again.", r.status_code)
+
+    def sign_many(self, bucket, paths, token, expires=3600):
+        """Short-lived links (default one hour) for private photos. Returns {path: full URL}."""
+        paths = [p for p in paths if p]
+        if not paths:
+            return {}
+        rows = self._request("POST", f"/storage/v1/object/sign/{bucket}", token=token, json_body={"expiresIn": expires, "paths": paths})
+        out = {}
+        for row in rows or []:
+            link = row.get("signedURL")
+            if link:
+                out[row["path"]] = link if link.startswith("http") else self.url + (link if link.startswith("/storage/v1") else "/storage/v1" + link)
+        return out
+
+    def remove(self, bucket, paths, token):
+        if paths:
+            self._request("DELETE", f"/storage/v1/object/{bucket}", token=token, json_body={"prefixes": list(paths)})
+
+    def list_folder(self, bucket, folder, token):
+        """Every file path directly inside one folder (a trip's folder)."""
+        names, offset = [], 0
+        while True:
+            rows = self._request("POST", f"/storage/v1/object/list/{bucket}", token=token,
+                                 json_body={"prefix": folder, "limit": 100, "offset": offset}) or []
+            names += [f"{folder}/{r['name']}" for r in rows if r.get("name")]
+            if len(rows) < 100:
+                return names
+            offset += 100
