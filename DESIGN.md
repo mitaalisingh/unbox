@@ -51,7 +51,9 @@ Before opening this to the public: check the current status of India's Digital P
 - Done and tested against a real Supabase project: accounts with email confirmation and a consent record, many trips per user, archive and delete, and privacy between users (a second account sees none of the first account's trips).
 - Not yet verified live: the password-reset email. Supabase's built-in sender is limited to a few emails per hour on the free plan.
 - Done and tested: boxes inside boxes, items, private photo upload with location removal, and real file deletion (checked against the live storage bucket: nothing left behind).
-- Next: search inside a trip, editing, then batch capture with on-device naming.
+- Done and tested: search inside a trip. The meaning-search database function was checked against the real project with the real model.
+- Known limits: the search model is English only, and its cutoff is untuned (short item names with no tags give loose matches).
+- Next: editing, measuring search quality on a real inventory, then batch capture with on-device naming.
 
 ## Known risks
 
