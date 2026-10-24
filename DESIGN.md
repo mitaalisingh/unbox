@@ -50,7 +50,8 @@ Before opening this to the public: check the current status of India's Digital P
 
 - Done and tested against a real Supabase project: accounts with email confirmation and a consent record, many trips per user, archive and delete, and privacy between users (a second account sees none of the first account's trips).
 - Not yet verified live: the password-reset email. Supabase's built-in sender is limited to a few emails per hour on the free plan.
-- Next: boxes, items and photos in the multi-user app, then batch capture with on-device naming.
+- Done and tested: boxes inside boxes, items, private photo upload with location removal, and real file deletion (checked against the live storage bucket: nothing left behind).
+- Next: search inside a trip, editing, then batch capture with on-device naming.
 
 ## Known risks
 

@@ -13,7 +13,7 @@ Unbox is a small web app for people who move house, hostel or city. Photograph t
 | | What it is | Status |
 |---|---|---|
 | **`app.py`** | The single-owner prototype: boxes inside boxes, photos, search, QR labels. Edited on your own computer. | Works. Used for a real move. |
-| **`webapp.py`** | The multi-user version: accounts and trips on Supabase (Postgres + Auth). | In progress. Accounts and trips work. Boxes, items and photos are not moved over yet. |
+| **`webapp.py`** | The multi-user version on Supabase (Postgres, Auth, Storage): accounts, trips, boxes inside boxes, items, and private photos. | In progress. Search, editing, batch capture and sharing are not built yet. |
 
 ## The prototype (`app.py`)
 
@@ -43,10 +43,13 @@ What exists and has been tested against a real Supabase project:
 - **Email confirmation**, login and logout
 - **Forgot password** (the same answer is given whether or not an email has an account)
 - **Trips:** create, archive (hidden but kept), restore, delete for good
+- **Boxes inside boxes, and items** with a name, tags, a note and a weight. Counts and known weights add up through nested boxes.
+- **Private photos:** location data (GPS) and all other hidden metadata are removed on upload, the picture is resized, and it is saved in a private bucket. Photos are shown through links that expire after an hour.
+- **Delete means delete:** removing an item, a box or a trip also removes its photo files. If the files can't be removed, nothing is deleted.
 - **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
 - **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
 
-Automated tests (31, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, and one user trying to reach another's data:
+Automated tests (61, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -68,13 +71,14 @@ The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
 - [x] Accounts with email confirmation, consent record, many trips per user, archive and delete
 - [x] Hosted database with row-level privacy rules (Supabase)
 - [ ] **Own email provider (SMTP)** before opening to the public: the built-in sender is for testing only and its limits and spam placement would block real users
-- [ ] Boxes, items and photos in the multi-user app, with private storage and short-lived photo links
+- [x] Boxes, items and photos in the multi-user app, with private storage and short-lived photo links
 - [ ] **Batch capture:** take photos at your own pace, upload together, review all the suggested names on one screen, add weights
 - [ ] **On-device AI naming**, so photos never leave the phone for the AI step; cloud AI only as an opt-in
 - [ ] "Scan a pile": one photo, objects found and cropped automatically, unknown ones named "Unidentified item"
 - [ ] A viewer password per trip, so the QR itself carries no secret
 - [ ] Installable PWA, QR labels generated in-app
-- [ ] Location data stripped from every uploaded photo
+- [x] Location data stripped from every uploaded photo
+- [ ] Search inside a trip (by meaning), editing boxes and items
 
 ## Privacy
 
