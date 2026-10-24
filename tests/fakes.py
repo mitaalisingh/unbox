@@ -95,7 +95,7 @@ class FakeSupabase:
     @staticmethod
     def _matches(row, params):
         for k, v in (params or {}).items():
-            if k in ("select", "order"):
+            if k in ("select", "order", "limit"):
                 continue
             if v.startswith("eq.") and str(row.get(k)) != v[3:]:
                 return False

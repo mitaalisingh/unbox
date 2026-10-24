@@ -525,3 +525,32 @@ def test_a_crashing_model_never_blocks_adding_items(fake):
     add(c, tid, {"name": "Mug"})
     assert len(fake.tables["nodes"]) == 1
     assert "Mug" in names(c.get(f"/trips/{tid}/search?q=mug").get_data(as_text=True))
+
+
+def test_items_missing_search_numbers_get_them_when_you_search(fake):
+    """Items added while the model wasn't ready (or by an older version) must still be found by meaning."""
+    from tests.fake_embed import vec
+    old_app = create_app(sb=fake, testing=True, embed_doc=lambda t: None, embed_query=lambda t: None)
+    c1 = old_app.test_client()
+    tid = logged_in_trip(c1, fake)
+    add(c1, tid, {"name": "Travel mug", "tags": "steel"})
+    assert not fake.tables["nodes"][0].get("embedding")
+    new_app = create_app(sb=fake, testing=True, embed_doc=vec, embed_query=vec)
+    c2 = new_app.test_client()
+    login(c2, "a@example.com")
+    html = c2.get(f"/trips/{tid}/search?q=something+to+drink+from").get_data(as_text=True)
+    assert "Travel mug" in names(html)                       # found by meaning, though it had no numbers when it was added
+    assert fake.tables["nodes"][0]["embedding"].startswith("[")
+
+
+def test_catch_up_never_touches_other_peoples_items(client, app, fake):
+    tid = stocked_trip(client, fake)
+    for n in fake.tables["nodes"]:
+        n.pop("embedding", None)
+    other = app.test_client()
+    make_user(fake, "b@example.com")
+    login(other, "b@example.com")
+    post(other, "/trips", {"name": "B trip"})
+    tid_b = [t["id"] for t in fake.tables["trips"] if t["name"] == "B trip"][0]
+    other.get(f"/trips/{tid_b}/search?q=mug")
+    assert not any(n.get("embedding") for n in fake.tables["nodes"] if n["trip_id"] == tid)

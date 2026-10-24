@@ -505,6 +505,19 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
             vec = None
         return {"embedding": vector_text(vec)} if vec else {}
 
+    def backfill_embeddings(tid, token, limit=50):
+        """Give any item that is missing its search numbers (added before the model was ready, or by an older
+        version) its numbers now, so meaning search covers everything. Words-only search still works if this fails."""
+        try:
+            rows = client.select("nodes", token, {"select": "id,name,tags,description", "trip_id": f"eq.{tid}",
+                                                  "embedding": "is.null", "limit": str(limit)})
+            for r in rows:
+                vec = make_doc_vector(f"{r['name']} {r['tags']} {r['description']}")
+                if vec:
+                    client.update("nodes", token, {"id": f"eq.{r['id']}"}, {"embedding": vector_text(vec)})
+        except Exception:
+            pass
+
     @app.route("/trips/<tid>/search")
     @login_required
     def trip_search(tid):
@@ -515,6 +528,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
         q = " ".join(request.args.get("q", "").split())[:100]
         results, urls = [], {}
         if q:
+            backfill_embeddings(tid, token)
             nodes = load_nodes(tid, token)
             score = {}
             for n in nodes:                                            # 1) words, plurals and typos
