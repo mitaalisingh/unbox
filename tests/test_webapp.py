@@ -811,3 +811,32 @@ def test_nobody_else_can_capture_into_or_review_my_trip(fake):
     logged_in_trip(other, fake, email="b@example.com", name="Theirs")
     assert capture(other, tid, [photo_with_gps()]).status_code == 404
     assert not fake.tables["nodes"]
+
+
+# ================= invite codes =================
+FORM = {"email": "new@example.com", "password": GOOD_PW, "password2": GOOD_PW, "age18": "on", "terms": "on"}
+
+
+def test_signup_is_open_when_no_invite_codes_are_set(client, fake, monkeypatch):
+    monkeypatch.delenv("INVITE_CODES", raising=False)
+    assert "Invite code" not in client.get("/signup").get_data(as_text=True)
+    assert post(client, "/signup", FORM).status_code == 200 and fake.signup_calls
+
+
+def test_signup_needs_a_valid_invite_code_when_set(client, fake, monkeypatch):
+    monkeypatch.setenv("INVITE_CODES", "friends2026, Hostel-Batch")
+    assert "Invite code" in client.get("/signup").get_data(as_text=True)
+    for bad in ("", "nope", "friends"):
+        r = post(client, "/signup", {**FORM, "invite": bad})
+        assert r.status_code == 400 and "invite code isn&#39;t valid" in r.get_data(as_text=True)
+    assert fake.signup_calls == []                                  # no email is sent for a wrong code
+    assert post(client, "/signup", {**FORM, "invite": "  HOSTEL-batch "}).status_code == 200   # case and spaces forgiven
+    assert len(fake.signup_calls) == 1
+
+
+def test_too_many_wrong_codes_locks_guessing_for_a_while(client, fake, monkeypatch):
+    monkeypatch.setenv("INVITE_CODES", "friends2026")
+    for i in range(10):
+        post(client, "/signup", {**FORM, "invite": f"guess{i}"})
+    assert post(client, "/signup", {**FORM, "invite": "friends2026"}).status_code == 400   # even the right one waits
+    assert fake.signup_calls == []

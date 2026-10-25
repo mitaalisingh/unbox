@@ -181,6 +181,27 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         return render_template("auth/privacy.html")
 
     # ---------------- sign-up / login / reset ----------------
+    # Invite codes: when INVITE_CODES is set (comma-separated), only people holding one can sign up.
+    # Unset means open sign-up, which is what you want on your own computer.
+    def invite_codes():
+        return [c.strip().lower() for c in os.environ.get("INVITE_CODES", "").split(",") if c.strip()]
+
+    wrong_codes = {}                                  # ip -> times of wrong guesses (kept in memory only)
+
+    def invite_ok(given):
+        codes = invite_codes()
+        if not codes:
+            return True
+        who = request.remote_addr or "?"
+        now = time.time()
+        recent = [t for t in wrong_codes.get(who, []) if now - t < 900]
+        if len(recent) >= 10:
+            return False
+        given = " ".join((given or "").split()).lower()
+        ok = any(secrets.compare_digest(given.encode(), c.encode()) for c in codes)
+        wrong_codes[who] = recent if ok else recent + [now]
+        return ok
+
     @app.route("/signup", methods=["GET", "POST"])
     def signup():
         if request.method == "POST":
@@ -197,9 +218,11 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
                 problem = "Unbox is for people aged 18 and over."
             elif not request.form.get("terms"):
                 problem = "Please accept the privacy notice to continue."
+            elif not invite_ok(request.form.get("invite")):
+                problem = "That invite code isn't valid. Ask the person who invited you."
             if problem:
                 flash(problem)
-                return render_template("auth/signup.html", email=email), 400
+                return render_template("auth/signup.html", email=email, invite_required=bool(invite_codes())), 400
             meta = {"confirmed_18_plus": True, "accepted_terms_at": datetime.now(timezone.utc).isoformat()}
             try:
                 client.sign_up(email, pw, meta, redirect_to=callback_url())
@@ -209,7 +232,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
                     return render_template("auth/signup.html", email=email), 400
                 # any other failure: say nothing that reveals whether the email already has an account
             return render_template("auth/check_email.html", email=email, purpose="confirm")
-        return render_template("auth/signup.html", email="")
+        return render_template("auth/signup.html", email="", invite_required=bool(invite_codes()))
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
