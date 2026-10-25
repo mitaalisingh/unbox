@@ -1,0 +1,51 @@
+{% extends "auth/base.html" %}
+{% block title %}{{ node.name if node else trip.name }} · Unbox{% endblock %}
+{% block topbar %}<header class="topbar"><span class="brand">Unbox</span></header>{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('viewer_view', tid=trip.id) }}">{{ trip.name }}</a>
+  {% for c in crumbs %}<a class="chip" href="{{ url_for('viewer_view', tid=trip.id, nid=c.id) }}">{{ c.name }}</a>{% endfor %}
+</div>
+
+{% if node and not node.is_box %}
+  {% if urls.get(node.photo_path) %}<img class="hero" src="{{ urls[node.photo_path] }}" alt="{{ node.name }}">{% endif %}
+  <h1>{{ node.name }}</h1>
+  <div class="chips">
+    {% if node.weight_kg is not none %}<span class="chip solid">{{ node.weight_kg }} kg</span>{% endif %}
+    {% if node.tags %}<span class="chip">{{ node.tags }}</span>{% endif %}
+  </div>
+  {% if node.description %}<p class="lead">{{ node.description }}</p>{% endif %}
+{% else %}
+  {% if node and urls.get(node.photo_path) %}<img class="hero" src="{{ urls[node.photo_path] }}" alt="{{ node.name }}">{% endif %}
+  <h1>{{ node.name if node else trip.name }}</h1>
+  <div class="chips">
+    <span class="chip solid">{{ total_items }} item{{ '' if total_items == 1 else 's' }}{% if boxes %} · {{ boxes|length }} box{{ '' if boxes|length == 1 else 'es' }} here{% endif %}</span>
+    {% if node and total_kg %}<span class="chip solid">{{ total_kg }} kg known</span>{% endif %}
+  </div>
+  {% if node and node.description %}<p class="lead">{{ node.description }}</p>{% endif %}
+
+  {% if boxes %}
+  <ul class="stack">
+  {% for b in boxes %}
+    <li><a class="glass boxcard" href="{{ url_for('viewer_view', tid=trip.id, nid=b.id) }}">
+      <span class="thumbs one">{% if urls.get(b.photo_path) %}<img src="{{ urls[b.photo_path] }}" alt="">{% else %}<span class="emoji">📦</span>{% endif %}</span>
+      <span class="txt"><strong>{{ b.name }}</strong><small>{{ stats[b.id][0] }} item{{ '' if stats[b.id][0] == 1 else 's' }}</small></span>
+      <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+    </a></li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if items %}
+  {% if boxes %}<h2>Loose items</h2>{% endif %}
+  <ul class="grid">
+  {% for i in items %}
+    <li><a class="tile" href="{{ url_for('viewer_view', tid=trip.id, nid=i.id) }}">
+      {% if urls.get(i.photo_path) %}<img src="{{ urls[i.photo_path] }}" alt="">{% else %}<span class="emoji">🔹</span>{% endif %}
+      <span class="cap"><strong>{{ i.name }}</strong>{% if i.weight_kg is not none %}<small>{{ i.weight_kg }} kg</small>{% endif %}</span>
+    </a></li>
+  {% endfor %}
+  </ul>
+  {% elif not boxes %}<p class="muted">Nothing in here.</p>{% endif %}
+{% endif %}
+{% endblock %}

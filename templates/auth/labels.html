@@ -1,0 +1,28 @@
+{% extends "auth/base.html" %}
+{% block title %}QR labels · Unbox{% endblock %}
+{% block content %}
+<div class="noprint">
+  <div class="chips">
+    <a class="chip" href="{{ url_for('trips') }}">Trips</a>
+    <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
+  </div>
+  <h1>QR labels</h1>
+  <p class="lead">Print these and stick one on each box. Scanning opens <code>{{ base }}/v/…</code> and asks for the viewer password. The QR itself contains no password.</p>
+  {% if local %}<p class="flash">This is your computer's own address, so these QR codes won't work on another phone. Open this page from your live site before printing.</p>{% endif %}
+  {% if not shared %}<p class="flash">No viewer password is set yet, so scanning shows nothing. Set one on the trip page first.</p>{% endif %}
+  <p>
+    <a class="chip" href="{{ url_for('labels', tid=trip.id, all=0 if everything else 1) }}">{{ 'Only big boxes' if everything else 'Include small boxes too' }}</a>
+    <button class="chip solid" type="button" onclick="window.print()">Print</button>
+  </p>
+</div>
+{% if cards %}
+<div class="sheet">
+{% for c in cards %}
+  <figure class="label">
+    <div class="qr">{{ c.svg|safe }}</div>
+    <figcaption><strong>{{ c.node.name }}</strong><span>{{ c.count }} item{{ '' if c.count == 1 else 's' }}</span><span>Scan to see what's inside</span></figcaption>
+  </figure>
+{% endfor %}
+</div>
+{% else %}<p class="muted">There are no boxes yet. Add a box first, then come back here.</p>{% endif %}
+{% endblock %}

@@ -47,12 +47,13 @@ What exists and has been tested against a real Supabase project:
 - **Private photos:** location data (GPS) and all other hidden metadata are removed on upload, the picture is resized, and it is saved in a private bucket. Photos are shown through links that expire after an hour.
 - **Search inside a trip:** exact words, plurals and typos, plus search by meaning ("something to drink from" finds the mug). Meaning search uses a small open-source text model (`bge-small-en-v1.5`, 384 numbers per item) that runs on the server's CPU, and the comparison happens in Postgres with pgvector. Item text never leaves your own server. It does not look at photos.
 - **Batch capture with naming suggestions:** choose up to 20 photos at once; each is named by a small open-source model running on the server (only the photo half of the model, compared with a precomputed list of 512 everyday item names), then one review screen lets you fix wrong names with a tap. Anything it doesn't recognise becomes "Unidentified item". Photos are never sent to another company.
+- **Viewer password and QR labels:** the owner sets a viewer password per trip and prints a QR label for each box. Anyone who scans a label sees only a password screen. With the password they see that box's contents, read-only, with no account. The QR holds no secret. Passwords are stored hashed, wrong guesses are limited, and changing or removing the password ends every existing viewer pass. The server uses Supabase's secret key for this one job only (after checking the password, and only for that one trip).
 - **Editing:** rename a box or item, change its tags, note and weight, replace or remove its photo (removing deletes the file), move it into another box, and rename a trip. Edits refresh the item's search numbers.
 - **Delete means delete:** removing an item, a box or a trip also removes its photo files. If the files can't be removed, nothing is deleted.
 - **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
 - **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
 
-Automated tests (100, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
+Automated tests (116, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -80,8 +81,9 @@ The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
 - [x] **Naming suggestions from photos:** choose up to 20 photos, each becomes an item named by a small open-source model that runs on our own server (nothing goes to an AI company), then fix wrong names on one review screen. First suggestion right about 8 times in 10 on a test set; measured results and limits are in [DESIGN.md](DESIGN.md)
 - [ ] Optional cloud boost for naming, only with per-batch consent and a preview of what is sent (not planned yet)
 - [ ] "Scan a pile": one photo, objects found and cropped automatically, unknown ones named "Unidentified item"
-- [ ] A viewer password per trip, so the QR itself carries no secret
-- [ ] Installable PWA, QR labels generated in-app
+- [x] A viewer password per trip, so the QR itself carries no secret
+- [x] QR labels generated in-app
+- [ ] Installable PWA (add to home screen)
 - [x] Location data stripped from every uploaded photo
 - [x] Search inside a trip (by meaning, words and typos)
 - [x] Editing boxes and items (rename, tags, weight, replace or remove the photo, move between boxes) and renaming trips

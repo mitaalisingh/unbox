@@ -10,7 +10,7 @@
 </head>
 <body>
 <div class="wrap">
-  <header class="topbar">
+  {% block topbar %}<header class="topbar">
     <a class="brand" href="{{ url_for('home') }}">Unbox</a>
     {% if logged_in %}
     <form method="post" action="{{ url_for('logout') }}" style="margin:0">
@@ -18,7 +18,7 @@
       <button class="back" type="submit" aria-label="Log out">Log out</button>
     </form>
     {% else %}<a class="back" href="{{ url_for('login') }}">Log in</a>{% endif %}
-  </header>
+  </header>{% endblock %}
   <main>
     {% with msgs = get_flashed_messages() %}{% for m in msgs %}<p class="flash">{{ m }}</p>{% endfor %}{% endwith %}
     {% block content %}{% endblock %}

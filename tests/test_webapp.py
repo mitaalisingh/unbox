@@ -875,3 +875,129 @@ def test_review_show_lists_the_saved_items_with_their_suggestions(fake):
     page = client.post(f"/trips/{tid}/review-show", data={"csrf": csrf(client), "results": results, "back": f"/trips/{tid}"}).get_data(as_text=True)
     assert "1 item saved" in page and "water bottle" in page and "ghost" not in page
     assert client.post(f"/trips/{tid}/review-show", data={"csrf": csrf(client), "results": "not json"}).status_code == 400
+
+
+# ================= viewers: no account, viewer password, QR labels =================
+def shared_trip(fake, app, password="welcome", email="a@example.com", name="Move"):
+    """An owner with one trip, a big box holding a lamp (with a photo), and a viewer password set."""
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake, email=email, name=name)
+    add(owner, tid, {"name": "Big box", "kind": "box"})
+    big = [n for n in fake.tables["nodes"] if n["trip_id"] == tid][-1]["id"]
+    add(owner, tid, {"name": "Secret lamp"}, photo=photo_with_gps(), parent=big)
+    if password:
+        post(owner, f"/trips/{tid}/viewer-password", {"password": password})
+    return owner, tid, big
+
+
+def unlock(viewer, tid, password, nid=""):
+    return post(viewer, f"/v/{tid}/unlock", {"password": password, "nid": nid})
+
+
+def test_a_scan_without_the_password_shows_nothing(fake, app):
+    owner, tid, big = shared_trip(fake, app)
+    viewer = app.test_client()
+    r = viewer.get(f"/v/{tid}/{big}")
+    page = r.get_data(as_text=True)
+    assert r.status_code == 401 and "Enter the password" in page
+    assert "Move" not in page and "Big box" not in page and "Secret lamp" not in page
+
+
+def test_unknown_trip_and_unshared_trip_look_exactly_alike(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)                 # exists but sharing is off
+    viewer = app.test_client()
+    a = viewer.get(f"/v/{tid}")
+    b = viewer.get("/v/00000000-0000-0000-0000-000000000000")
+    assert a.status_code == b.status_code == 401
+    assert unlock(viewer, tid, "anything").status_code == 401                # no password set: nothing unlocks it
+    assert viewer.get(f"/v/{tid}").status_code == 401
+
+
+def test_wrong_password_is_refused_and_recorded_right_one_shows_the_box(fake, app):
+    owner, tid, big = shared_trip(fake, app)
+    viewer = app.test_client()
+    r = unlock(viewer, tid, "wrong", big)
+    assert r.status_code == 401 and "Secret lamp" not in r.get_data(as_text=True) and len(fake.tables["viewer_attempts"]) == 1
+    r = unlock(viewer, tid, "welcome", big)
+    assert r.status_code == 302 and r.headers["Location"].endswith(f"/v/{tid}/{big}")
+    page = viewer.get(f"/v/{tid}/{big}").get_data(as_text=True)
+    assert "Secret lamp" in page and "1 item" in page
+    assert "https://files.example/" in page and "token=viewer" in page       # the photo, through a short-lived link
+    assert "Edit" not in page and "Delete" not in page                       # read-only
+
+
+def test_the_password_is_stored_hashed_and_never_sent_out(fake, app):
+    owner, tid, big = shared_trip(fake, app)
+    stored = fake.tables["trips"][0]["viewer_pw_hash"]
+    assert stored and "welcome" not in stored
+    viewer = app.test_client()
+    unlock(viewer, tid, "welcome")
+    for url in (f"/v/{tid}", f"/v/{tid}/{big}", f"/trips/{tid}"):
+        body = (viewer if url.startswith("/v/") else owner).get(url).get_data(as_text=True)
+        assert stored not in body and SECRET_KEY_VALUE not in body
+
+
+def test_a_pass_is_only_good_for_its_own_trip(fake, app):
+    owner, tid, big = shared_trip(fake, app)
+    owner2, tid2, big2 = shared_trip(fake, app, password="other-pass", email="b@example.com", name="Theirs")
+    viewer = app.test_client()
+    unlock(viewer, tid, "welcome")
+    assert viewer.get(f"/v/{tid2}").status_code == 401                       # trip 1's password does not open trip 2
+    assert unlock(viewer, tid2, "welcome").status_code == 401
+    assert viewer.get(f"/v/{tid}/{big2}").status_code == 404                 # a box from another trip is not reachable via this trip
+    assert unlock(viewer, tid2, "other-pass").status_code == 302
+
+
+def test_changing_or_removing_the_password_ends_existing_passes(fake, app):
+    owner, tid, big = shared_trip(fake, app)
+    viewer = app.test_client()
+    unlock(viewer, tid, "welcome")
+    assert viewer.get(f"/v/{tid}").status_code == 200
+    time.sleep(0.01)
+    post(owner, f"/trips/{tid}/viewer-password", {"password": "brand-new"})
+    assert viewer.get(f"/v/{tid}").status_code == 401                        # the old pass stopped working
+    assert unlock(viewer, tid, "welcome").status_code == 401 and unlock(viewer, tid, "brand-new").status_code == 302
+    post(owner, f"/trips/{tid}/viewer-password", {"remove": "1"})
+    assert viewer.get(f"/v/{tid}").status_code == 401 and fake.tables["trips"][0]["viewer_pw_hash"] is None
+
+
+def test_guessing_the_password_is_slowed_down(fake, app):
+    owner, tid, big = shared_trip(fake, app)
+    viewer = app.test_client()
+    for i in range(8):
+        assert unlock(viewer, tid, f"guess{i}").status_code == 401
+    r = unlock(viewer, tid, "welcome")                                      # even the right one has to wait
+    assert r.status_code == 429 and viewer.get(f"/v/{tid}").status_code == 401
+
+
+def test_viewer_only_ever_asks_the_database_for_one_trip(fake, app):
+    owner, tid, big = shared_trip(fake, app)
+    viewer = app.test_client()
+    unlock(viewer, tid, "welcome")
+    viewer.get(f"/v/{tid}/{big}")
+    reads = [c for c in fake.admin_calls if c[0] == "select" and c[1] in ("trips", "nodes")]
+    assert reads and all(c[2].get("id") == f"eq.{tid}" or c[2].get("trip_id") == f"eq.{tid}" for c in reads)
+    assert "embedding" not in " ".join(c[2].get("select", "") for c in reads)  # the search numbers are not needed or sent
+
+
+def test_only_the_owner_can_set_the_viewer_password_and_it_has_a_minimum_length(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    stranger = app.test_client()
+    logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
+    assert post(stranger, f"/trips/{tid}/viewer-password", {"password": "hacked-in"}).status_code == 404
+    assert fake.tables["trips"][0].get("viewer_pw_hash") is None
+    post(owner, f"/trips/{tid}/viewer-password", {"password": "abc"})
+    assert fake.tables["trips"][0].get("viewer_pw_hash") is None
+    anon = app.test_client()                                               # not logged in: sent to the login page, nothing saved
+    assert post(anon, f"/trips/{tid}/viewer-password", {"password": "welcomes"}).status_code == 302
+    assert fake.tables["trips"][0].get("viewer_pw_hash") is None
+
+
+def test_qr_labels_link_to_the_viewer_page_and_contain_no_password(fake, app):
+    owner, tid, big = shared_trip(fake, app)
+    page = owner.get(f"/trips/{tid}/labels").get_data(as_text=True)
+    assert "<svg" in page and "Big box" in page and "1 item" in page and "welcome" not in page
+    stranger = app.test_client()
+    logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
+    assert stranger.get(f"/trips/{tid}/labels").status_code == 404
+    assert app.test_client().get(f"/trips/{tid}/labels").status_code == 302   # needs login

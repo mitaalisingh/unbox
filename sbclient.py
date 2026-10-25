@@ -148,3 +148,39 @@ class Supabase:
     def rpc(self, fn, token, args):
         """Call a database function as the logged-in user (the row-level rules still apply)."""
         return self._request("POST", f"/rest/v1/rpc/{fn}", token=token, json_body=args)
+
+    # ---- Server-only calls with the SECRET key. Used for exactly one job: showing a trip to a viewer who has no
+    # account but knows the trip's viewer password. The caller checks the password first and asks only for that trip.
+    def _admin(self, method, path, *, json_body=None, params=None, prefer=None):
+        if not self.secret_key:
+            raise SupabaseError("Viewer links aren't set up on this server.")
+        headers = {"apikey": self.secret_key, "Content-Type": "application/json"}
+        if self.secret_key.startswith("eyJ"):                 # older keys are JWTs and must also be sent as a bearer token
+            headers["Authorization"] = f"Bearer {self.secret_key}"
+        if prefer:
+            headers["Prefer"] = prefer
+        try:
+            r = self._http.request(method, self.url + path, headers=headers, json=json_body, params=params)
+        except httpx.HTTPError:
+            raise SupabaseError("We couldn't reach the server. Please try again.") from None
+        if r.status_code >= 400:
+            raise SupabaseError(_friendly(r.status_code, r.text), r.status_code)
+        return r.json() if r.content else None
+
+    def admin_select(self, table, params):
+        return self._admin("GET", f"/rest/v1/{table}", params=params)
+
+    def admin_insert(self, table, row):
+        return self._admin("POST", f"/rest/v1/{table}", json_body=row)
+
+    def admin_sign_many(self, bucket, paths, expires=3600):
+        paths = [p for p in paths if p]
+        if not paths:
+            return {}
+        rows = self._admin("POST", f"/storage/v1/object/sign/{bucket}", json_body={"expiresIn": expires, "paths": paths})
+        out = {}
+        for row in rows or []:
+            link = row.get("signedURL")
+            if link:
+                out[row["path"]] = link if link.startswith("http") else self.url + (link if link.startswith("/storage/v1") else "/storage/v1" + link)
+        return out

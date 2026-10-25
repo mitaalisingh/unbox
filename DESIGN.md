@@ -127,7 +127,8 @@ Before shipping any cloud option: confirm the provider's current terms and check
 - Known limits: the search model is English only, and its cutoff is untuned (short item names with no tags give loose matches).
 - Done and tested: editing (text, weight, photo replace and removal, moving between boxes), trip renaming, and the password-reset email.
 - Done and tested: batch capture. Choose up to 20 photos, each becomes an item named by the AI (or "Unidentified item"), and one review screen lets the person fix names with one tap from the top three suggestions. 100 automated tests.
-- Next: a custom email sender, deploying with an invite code, trying it on a real phone, then the viewer password and in-app QR labels.
+- Done and tested: deployed on Render (free) with invite codes; viewer password per trip, QR labels in the app, and no-account viewing (116 tests, including a viewer reaching only the one trip they were given the password for).
+- Next: user-interface polish, installable home-screen icon, testing with real people.
 
 ## Known risks
 

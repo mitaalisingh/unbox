@@ -7,20 +7,23 @@ How login works: the server calls Supabase Auth, keeps the user's tokens in a si
 sends the USER'S token with every database call. The database's row-level rules then decide what that user can
 see, so a bug here cannot expose another person's trips.
 """
+import hashlib
 import os
 import re
 import secrets
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 
+import segno
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
 import naming
 import search as searchlib
 from images import BadImage, clean_photo
 from sbclient import Supabase, SupabaseError
+from werkzeug.security import check_password_hash, generate_password_hash
 
 EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD = 10
@@ -384,7 +387,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     NODE_COLUMNS = "id,trip_id,parent_id,is_box,name,description,tags,weight_kg,photo_path,position"
 
     def get_trip(tid, token):
-        rows = client.select("trips", token, {"select": "id,name,archived_at", "id": f"eq.{tid}"})
+        rows = client.select("trips", token, {"select": "id,name,archived_at,viewer_pw_set_at", "id": f"eq.{tid}"})
         return rows[0] if rows else None
 
     def load_nodes(tid, token):
@@ -776,6 +779,123 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         flash(f"Saved {changed} change{'s' if changed != 1 else ''}." if changed else "All names kept.")
         back = request.form.get("back", "")
         return redirect(safe_next(back, url_for("trip_view", tid=tid)))
+
+    # ---------------- owner: viewer password and printable QR labels ----------------
+    @app.route("/trips/<tid>/viewer-password", methods=["POST"])
+    @login_required
+    def set_viewer_password(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        pw = request.form.get("password", "")
+        if request.form.get("remove"):
+            client.update("trips", token, {"id": f"eq.{tid}"}, {"viewer_pw_hash": None, "viewer_pw_set_at": None})
+            flash("Sharing is off. Scanning a label now shows nothing.")
+        elif not 6 <= len(pw) <= 100:
+            flash("The viewer password needs to be 6 to 100 characters.")
+        else:
+            client.update("trips", token, {"id": f"eq.{tid}"}, {"viewer_pw_hash": generate_password_hash(pw),
+                                                               "viewer_pw_set_at": datetime.now(timezone.utc).isoformat()})
+            flash("Viewer password saved. Anyone who scanned with the old one needs the new one.")
+        return redirect(url_for("trip_view", tid=tid))
+
+    @app.route("/trips/<tid>/labels")
+    @login_required
+    def labels(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        trip = get_trip(tid, token)
+        if not trip:
+            abort(404)
+        nodes = load_nodes(tid, token)
+        everything = request.args.get("all") == "1"
+        boxes = [n for n in nodes if n["is_box"] and (everything or not n.get("parent_id"))]
+        base = request.url_root.rstrip("/")
+        cards = []
+        for b in boxes:
+            link = base + url_for("viewer_view", tid=tid, nid=b["id"])
+            cards.append({"node": b, "count": rollup(nodes, b["id"])[0],
+                          "svg": segno.make(link, error="m").svg_inline(scale=8, border=4, light="#fff")})
+        local = request.host.split(":")[0] in ("localhost", "127.0.0.1", "[::1]")
+        return render_template("auth/labels.html", trip=trip, cards=cards, everything=everything, local=local,
+                               shared=bool(trip.get("viewer_pw_set_at")), base=base)
+
+    # ---------------- viewers: no account, just the trip's viewer password ----------------
+    VIEWER_DAYS = 7
+    DUMMY_HASH = generate_password_hash("not a real password")      # so a missing trip takes as long as a wrong password
+    VIEWER_NODE_COLUMNS = "id,parent_id,is_box,name,description,tags,weight_kg,photo_path,position"
+
+    def viewer_trip(tid):
+        rows = client.admin_select("trips", {"select": "id,name,viewer_pw_hash,viewer_pw_set_at", "id": f"eq.{tid}"})
+        return rows[0] if rows else None
+
+    def viewer_allowed(trip):
+        """A viewer pass lasts a week, and stops working the moment the owner changes or removes the password."""
+        grant = (session.get("viewer") or {}).get(trip["id"]) if trip else None
+        return bool(grant and trip.get("viewer_pw_hash") and grant[1] == str(trip.get("viewer_pw_set_at"))
+                    and time.time() - grant[0] < VIEWER_DAYS * 86400)
+
+    def ask_for_password(tid, nid, message=None, status=401):
+        if message:
+            flash(message)
+        return render_template("viewer/password.html", tid=tid, nid=nid), status
+
+    @app.route("/v/<tid>")
+    @app.route("/v/<tid>/<nid>")
+    def viewer_view(tid, nid=None):
+        tid = trip_id_or_404(tid)
+        nid = trip_id_or_404(nid) if nid else None
+        try:
+            trip = viewer_trip(tid)
+        except SupabaseError:
+            return "This page is not available right now. Please try again in a minute.", 503
+        if not viewer_allowed(trip):
+            return ask_for_password(tid, nid)                       # looks the same whether or not the trip exists
+        nodes = sorted(client.admin_select("nodes", {"select": VIEWER_NODE_COLUMNS, "trip_id": f"eq.{tid}"}),
+                       key=lambda n: (n.get("position") or 0, n["name"].lower()))
+        node = None
+        if nid:
+            node = next((n for n in nodes if n["id"] == nid), None)
+            if not node:
+                abort(404)
+        parent = node["id"] if node else None
+        kids = [n for n in nodes if n.get("parent_id") == parent] if (not node or node["is_box"]) else []
+        urls = client.admin_sign_many(BUCKET, [n.get("photo_path") for n in kids + ([node] if node else [])])
+        stats = {n["id"]: rollup(nodes, n["id"]) for n in kids if n["is_box"]}
+        total_items, total_kg = (rollup(nodes, node["id"]) if node and node["is_box"] else
+                                 (sum(1 for n in nodes if not n["is_box"]), 0) if not node else (0, 0))
+        return render_template("viewer/box.html", trip=trip, node=node, crumbs=crumbs_for(nodes, node) if node else [],
+                               boxes=[n for n in kids if n["is_box"]], items=[n for n in kids if not n["is_box"]],
+                               urls=urls, stats=stats, total_items=total_items, total_kg=total_kg)
+
+    @app.route("/v/<tid>/unlock", methods=["POST"])
+    def viewer_unlock(tid):
+        tid = trip_id_or_404(tid)
+        raw_nid = (request.form.get("nid") or "").strip()
+        nid = trip_id_or_404(raw_nid) if raw_nid else None
+        key = hashlib.sha256(f"{secret}|{request.remote_addr}".encode()).hexdigest()[:32]
+        try:
+            since = (datetime.now(timezone.utc) - timedelta(minutes=15)).isoformat()
+            tries = client.admin_select("viewer_attempts", {"select": "id", "trip_id": f"eq.{tid}", "client_key": f"eq.{key}",
+                                                            "attempted_at": f"gte.{since}"})
+            if len(tries) >= 8:
+                return ask_for_password(tid, nid, "Too many wrong tries. Please wait 15 minutes.", 429)
+            trip = viewer_trip(tid)
+        except SupabaseError:
+            return "This page is not available right now. Please try again in a minute.", 503
+        stored = (trip or {}).get("viewer_pw_hash")
+        ok = check_password_hash(stored or DUMMY_HASH, request.form.get("password", "")) and bool(stored)
+        if not ok:
+            if trip:
+                try:
+                    client.admin_insert("viewer_attempts", {"trip_id": tid, "client_key": key})
+                except SupabaseError:
+                    pass
+            return ask_for_password(tid, nid, "That password isn't right.")
+        grants = dict(session.get("viewer") or {})
+        grants[tid] = [time.time(), str(trip.get("viewer_pw_set_at"))]
+        session["viewer"] = dict(list(grants.items())[-10:])
+        session.permanent = True
+        return redirect(url_for("viewer_view", tid=tid, nid=nid) if nid else url_for("viewer_view", tid=tid))
 
     @app.route("/trips/<tid>/rename", methods=["POST"])
     @login_required

@@ -24,6 +24,8 @@ class FakeSupabase:
         self.recover_calls, self.signup_calls = [], []
         self.fail_refresh = False
         self.passwords_set = []
+        self.admin_calls = []              # every call made with the server's secret key, in order
+        self.tables.setdefault("viewer_attempts", [])
 
     # ---- helpers for the tests ----
     def add_user(self, email, password="correct horse battery", confirmed=True, meta=None):
@@ -100,6 +102,8 @@ class FakeSupabase:
             if v.startswith("eq.") and str(row.get(k)) != v[3:]:
                 return False
             if v == "is.null" and row.get(k) is not None:
+                return False
+            if v.startswith("gte.") and str(row.get(k)) < v[4:]:
                 return False
         return True
 
@@ -191,3 +195,16 @@ class FakeSupabase:
             sim = sum(a * b for a, b in zip(q, v))
             out.append({"id": n["id"], "name": n["name"], "similarity": sim})
         return sorted(out, key=lambda r: -r["similarity"])[: args["p_limit"]]
+
+    # ---- secret-key calls: not filtered by owner, which is exactly why the app must check the password first ----
+    def admin_select(self, table, params):
+        self.admin_calls.append(("select", table, dict(params or {})))
+        return [dict(r) for r in self.tables[table] if self._matches(r, params)]
+
+    def admin_insert(self, table, row):
+        self.admin_calls.append(("insert", table, dict(row)))
+        self.tables[table].append(dict(row))
+
+    def admin_sign_many(self, bucket, paths, expires=3600):
+        self.admin_calls.append(("sign", bucket, list(paths)))
+        return {p: f"https://files.example/{p}?token=viewer" for p in paths if p and p in self.storage}
