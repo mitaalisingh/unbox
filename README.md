@@ -75,7 +75,7 @@ The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
 - [ ] **Own email provider (SMTP)** before opening to the public: the built-in sender is for testing only and its limits and spam placement would block real users
 - [x] Boxes, items and photos in the multi-user app, with private storage and short-lived photo links
 - [ ] **Batch capture:** take photos at your own pace, upload together, review all the suggested names on one screen, add weights
-- [ ] **On-device AI naming**, so photos never leave the phone for the AI step; cloud AI only as an opt-in
+- [ ] **Naming suggestions from photos** (top-3 tap-to-confirm, "Unidentified item" fallback), local by default; an optional cloud boost only with per-batch consent and a preview of what is sent. Measured results and the design are in [DESIGN.md](DESIGN.md)
 - [ ] "Scan a pile": one photo, objects found and cropped automatically, unknown ones named "Unidentified item"
 - [ ] A viewer password per trip, so the QR itself carries no secret
 - [ ] Installable PWA, QR labels generated in-app
