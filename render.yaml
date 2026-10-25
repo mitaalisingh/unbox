@@ -5,11 +5,13 @@ services:
     plan: free
     healthCheckPath: /login
     envVars:
-      - key: APP_PASSWORD
-        sync: false          # you type this in the Render dashboard; never commit it
+      - key: SUPABASE_URL
+        sync: false          # you type these in the Render dashboard; never commit them
+      - key: SUPABASE_PUBLIC_KEY
+        sync: false
+      - key: INVITE_CODES
+        sync: false          # comma-separated codes you choose; sign-up needs one
       - key: SECRET_KEY
         generateValue: true  # Render makes a random one so logins survive restarts
       - key: BEHIND_PROXY
         value: "1"
-      - key: DATA_PASSPHRASE
-        sync: false          # the passphrase you typed when running: python deploy_tools.py pack
