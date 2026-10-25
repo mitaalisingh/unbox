@@ -17,6 +17,7 @@ from functools import wraps
 from pathlib import Path
 
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+import naming
 import search as searchlib
 from images import BadImage, clean_photo
 from sbclient import Supabase, SupabaseError
@@ -58,7 +59,7 @@ def safe_next(target, fallback):
     return fallback
 
 
-def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
+def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest=None):
     load_dotenv()
     app = Flask(__name__)
     secret = os.environ.get("SECRET_KEY")
@@ -70,7 +71,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
     app.config.update(
         SECRET_KEY=secret, TESTING=testing,
         SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_SECURE=not dev_http,
-        PERMANENT_SESSION_LIFETIME=14 * 24 * 3600, MAX_CONTENT_LENGTH=25 * 1024 * 1024,
+        PERMANENT_SESSION_LIFETIME=14 * 24 * 3600, MAX_CONTENT_LENGTH=120 * 1024 * 1024,
     )
     if os.environ.get("BEHIND_PROXY") == "1":
         from werkzeug.middleware.proxy_fix import ProxyFix
@@ -79,6 +80,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
     app.sb = client
     make_doc_vector = embed_doc or searchlib.embed_doc          # tests pass simple stand-ins
     make_query_vector = embed_query or searchlib.embed_query
+    suggest_names = suggest or naming.suggest                    # tests pass a stand-in
 
     if not testing and embed_doc is None:               # load the search model in the background so the first "Add" isn't slow
         import threading
@@ -619,6 +621,88 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None):
         urls = client.sign_many(BUCKET, [node.get("photo_path")], token)
         return render_template("auth/edit_node.html", trip=get_trip(tid, token), node=node, crumbs=crumbs_for(nodes, node),
                                choices=choices, urls=urls)
+
+    MAX_BATCH = 20
+
+    @app.route("/trips/<tid>/capture", methods=["POST"])
+    @login_required
+    def capture(tid):
+        """Several photos at once: each becomes an item named by the AI's best guess, then one review screen."""
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        parent_id = (request.form.get("parent_id") or "").strip() or None
+        back = url_for("node_view", tid=tid, nid=parent_id) if parent_id else url_for("trip_view", tid=tid)
+        if parent_id:
+            parent = client.select("nodes", token, {"select": "id,is_box", "id": f"eq.{trip_id_or_404(parent_id)}", "trip_id": f"eq.{tid}"})
+            if not parent or not parent[0]["is_box"]:
+                flash("Items can only be added inside a box.")
+                return redirect(url_for("trip_view", tid=tid))
+        files = [f for f in request.files.getlist("photos") if f and f.filename]
+        if not files:
+            flash("Choose at least one photo.")
+            return redirect(back)
+        if len(files) > MAX_BATCH:
+            flash(f"Up to {MAX_BATCH} photos at a time, please. Add the rest in another batch.")
+            return redirect(back)
+        position = len(client.select("nodes", token, {"select": "id", "trip_id": f"eq.{tid}", "parent_id": f"eq.{parent_id}" if parent_id else "is.null"}))
+        made, skipped = [], 0
+        for f in files:
+            try:
+                image = clean_photo(f.read())
+            except BadImage:
+                skipped += 1
+                continue
+            try:
+                guesses = suggest_names(image)
+            except Exception:                                      # a model problem must never lose the photo
+                guesses = []
+            name = naming.best_name(guesses)
+            nid = str(uuid.uuid4())
+            path = f"{tid}/{nid}.jpg"
+            try:
+                client.upload(BUCKET, path, token, image)
+                position += 1
+                client.insert("nodes", token, {"id": nid, "trip_id": tid, "parent_id": parent_id, "is_box": False, "name": name,
+                                               "tags": "", "description": "", "weight_kg": None, "photo_path": path,
+                                               "position": position, **embedding_field(name, "", "")})
+            except SupabaseError:
+                skipped += 1
+                try:
+                    client.remove(BUCKET, [path], token)
+                except SupabaseError:
+                    pass
+                continue
+            made.append({"id": nid, "name": name, "path": path, "guesses": [g[0] for g in guesses],
+                         "check": not guesses or guesses[0][1] < naming.CHECK})
+        if skipped:
+            flash(f"{skipped} photo{'s' if skipped != 1 else ''} couldn't be used and {'were' if skipped != 1 else 'was'} skipped.")
+        if not made:
+            return redirect(back)
+        urls = client.sign_many(BUCKET, [m["path"] for m in made], token)
+        return render_template("auth/review.html", trip=get_trip(tid, token), made=made, urls=urls, back=back,
+                               unidentified=naming.UNKNOWN)
+
+    @app.route("/trips/<tid>/review", methods=["POST"])
+    @login_required
+    def review(tid):
+        """Save the names the person corrected on the review screen."""
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        changed = 0
+        for raw in request.form.getlist("id")[:MAX_BATCH]:
+            nid = trip_id_or_404(raw)
+            name = " ".join(request.form.get(f"name_{nid}", "").split())
+            old = request.form.get(f"old_{nid}", "")
+            if not 1 <= len(name) <= 80 or name == old:
+                continue
+            client.update("nodes", token, {"id": f"eq.{nid}", "trip_id": f"eq.{tid}"},
+                          {"name": name, "embedding": embedding_field(name, "", "").get("embedding")})
+            changed += 1
+        flash(f"Saved {changed} change{'s' if changed != 1 else ''}." if changed else "All names kept.")
+        back = request.form.get("back", "")
+        return redirect(safe_next(back, url_for("trip_view", tid=tid)))
 
     @app.route("/trips/<tid>/rename", methods=["POST"])
     @login_required

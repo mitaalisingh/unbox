@@ -726,3 +726,88 @@ def test_only_the_owner_can_rename_a_trip(client, app, fake):
     login(other, "b@example.com")
     assert post(other, f"/trips/{tid}/rename", {"name": "Stolen"}).status_code == 404
     assert fake.tables["trips"][0]["name"] == "Mine"
+
+
+# ================= batch capture: photos named by the AI =================
+def capture_app(fake, guesses=None):
+    from tests.fake_embed import vec
+    table = guesses or {}
+    calls = []
+
+    def suggest(image):
+        calls.append(len(image))
+        return table.get(len(calls), [("water bottle", 0.8), ("flask", 0.1), ("mug", 0.05)])
+    return create_app(sb=fake, testing=True, embed_doc=vec, embed_query=vec, suggest=suggest), calls
+
+
+def capture(client, tid, photos, parent=""):
+    data = {"parent_id": parent, "csrf": csrf(client), "photos": [(io.BytesIO(p), f"p{i}.jpg") for i, p in enumerate(photos)]}
+    return client.post(f"/trips/{tid}/capture", data=data, content_type="multipart/form-data")
+
+
+def test_capture_names_every_photo_and_shows_the_review_screen(fake):
+    app, calls = capture_app(fake, {2: [("mystery thing", 0.05), ("lamp", 0.04), ("mug", 0.03)]})
+    client = app.test_client()
+    tid = logged_in_trip(client, fake)
+    r = capture(client, tid, [photo_with_gps(), photo_with_gps(), photo_with_gps()])
+    page = r.get_data(as_text=True)
+    assert r.status_code == 200 and "3 items saved" in page and "water bottle" in page and "flask" in page
+    nodes = fake.tables["nodes"]
+    assert [n["name"] for n in nodes] == ["water bottle", "Unidentified item", "water bottle"]
+    assert all(n["photo_path"] in fake.storage for n in nodes) and [n["position"] for n in nodes] == [1, 2, 3]
+    assert page.count("Not sure about this one") == 1              # only the shaky guess is flagged
+    assert b"Exif" not in fake.storage[nodes[0]["photo_path"]]       # GPS and metadata removed here too
+
+
+def test_capture_skips_bad_files_and_still_saves_the_rest(fake):
+    app, _ = capture_app(fake)
+    client = app.test_client()
+    tid = logged_in_trip(client, fake)
+    r = capture(client, tid, [photo_with_gps(), b"<html>not a photo</html>"])
+    assert "1 photo couldn" in r.get_data(as_text=True) and len(fake.tables["nodes"]) == 1
+
+
+def test_capture_survives_an_ai_failure(fake):
+    from tests.fake_embed import vec
+
+    def broken(image):
+        raise RuntimeError("model missing")
+    app = create_app(sb=fake, testing=True, embed_doc=vec, embed_query=vec, suggest=broken)
+    client = app.test_client()
+    tid = logged_in_trip(client, fake)
+    capture(client, tid, [photo_with_gps()])
+    assert [n["name"] for n in fake.tables["nodes"]] == ["Unidentified item"]
+
+
+def test_capture_limits_and_rules(fake):
+    app, _ = capture_app(fake)
+    client = app.test_client()
+    tid = logged_in_trip(client, fake)
+    r = capture(client, tid, [])
+    assert r.status_code == 302
+    assert "Choose at least one photo" in client.get(f"/trips/{tid}").get_data(as_text=True)
+    r = capture(client, tid, [photo_with_gps()] * 21)
+    assert r.status_code == 302 and not fake.tables["nodes"]
+    assert "Up to 20 photos" in client.get(f"/trips/{tid}").get_data(as_text=True)
+
+
+def test_review_saves_only_the_corrected_names(fake):
+    app, _ = capture_app(fake)
+    client = app.test_client()
+    tid = logged_in_trip(client, fake)
+    capture(client, tid, [photo_with_gps(), photo_with_gps()])
+    a, b = fake.tables["nodes"]
+    r = client.post(f"/trips/{tid}/review", data={"csrf": csrf(client), "id": [a["id"], b["id"]], f"old_{a['id']}": "water bottle",
+                    f"name_{a['id']}": "Steel flask", f"old_{b['id']}": "water bottle", f"name_{b['id']}": "water bottle", "back": f"/trips/{tid}"})
+    assert r.status_code == 302
+    assert [n["name"] for n in fake.tables["nodes"]] == ["Steel flask", "water bottle"]
+    assert fake.tables["nodes"][0]["embedding"]                    # search numbers refreshed with the new name
+
+
+def test_nobody_else_can_capture_into_or_review_my_trip(fake):
+    app, _ = capture_app(fake)
+    mine, other = app.test_client(), app.test_client()
+    tid = logged_in_trip(mine, fake)
+    logged_in_trip(other, fake, email="b@example.com", name="Theirs")
+    assert capture(other, tid, [photo_with_gps()]).status_code == 404
+    assert not fake.tables["nodes"]

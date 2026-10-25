@@ -13,7 +13,7 @@ Unbox is a small web app for people who move house, hostel or city. Photograph t
 | | What it is | Status |
 |---|---|---|
 | **`app.py`** | The single-owner prototype: boxes inside boxes, photos, search, QR labels. Edited on your own computer. | Works. Used for a real move. |
-| **`webapp.py`** | The multi-user version on Supabase (Postgres, Auth, Storage): accounts, trips, boxes inside boxes, items, and private photos. | In progress. Batch capture and sharing are not built yet. |
+| **`webapp.py`** | The multi-user version on Supabase (Postgres, Auth, Storage): accounts, trips, boxes inside boxes, items, and private photos. | In progress. Batch photo capture with automatic naming works; sharing is not built yet. |
 
 ## The prototype (`app.py`)
 
@@ -46,12 +46,13 @@ What exists and has been tested against a real Supabase project:
 - **Boxes inside boxes, and items** with a name, tags, a note and a weight. Counts and known weights add up through nested boxes.
 - **Private photos:** location data (GPS) and all other hidden metadata are removed on upload, the picture is resized, and it is saved in a private bucket. Photos are shown through links that expire after an hour.
 - **Search inside a trip:** exact words, plurals and typos, plus search by meaning ("something to drink from" finds the mug). Meaning search uses a small open-source text model (`bge-small-en-v1.5`, 384 numbers per item) that runs on the server's CPU, and the comparison happens in Postgres with pgvector. Item text never leaves your own server. It does not look at photos.
+- **Batch capture with naming suggestions:** choose up to 20 photos at once; each is named by a small open-source model running on the server (only the photo half of the model, compared with a precomputed list of 512 everyday item names), then one review screen lets you fix wrong names with a tap. Anything it doesn't recognise becomes "Unidentified item". Photos are never sent to another company.
 - **Editing:** rename a box or item, change its tags, note and weight, replace or remove its photo (removing deletes the file), move it into another box, and rename a trip. Edits refresh the item's search numbers.
 - **Delete means delete:** removing an item, a box or a trip also removes its photo files. If the files can't be removed, nothing is deleted.
 - **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
 - **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
 
-Automated tests (94, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
+Automated tests (100, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -74,8 +75,10 @@ The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
 - [x] Hosted database with row-level privacy rules (Supabase)
 - [ ] **Own email provider (SMTP)** before opening to the public: the built-in sender is for testing only and its limits and spam placement would block real users
 - [x] Boxes, items and photos in the multi-user app, with private storage and short-lived photo links
-- [ ] **Batch capture:** take photos at your own pace, upload together, review all the suggested names on one screen, add weights
-- [ ] **Naming suggestions from photos** (top-3 tap-to-confirm, "Unidentified item" fallback), local by default; an optional cloud boost only with per-batch consent and a preview of what is sent. Measured results and the design are in [DESIGN.md](DESIGN.md)
+- [x] **Batch capture:** take photos at your own pace, upload together, review all the suggested names on one screen
+- [ ] Weights in the review screen
+- [x] **Naming suggestions from photos:** choose up to 20 photos, each becomes an item named by a small open-source model that runs on our own server (nothing goes to an AI company), then fix wrong names on one review screen. First suggestion right about 8 times in 10 on a test set; measured results and limits are in [DESIGN.md](DESIGN.md)
+- [ ] Optional cloud boost for naming, only with per-batch consent and a preview of what is sent (not planned yet)
 - [ ] "Scan a pile": one photo, objects found and cropped automatically, unknown ones named "Unidentified item"
 - [ ] A viewer password per trip, so the QR itself carries no secret
 - [ ] Installable PWA, QR labels generated in-app

@@ -12,7 +12,7 @@ After a move, people open every box to find one thing. The goal: scan a QR on a 
 |---|---|---|
 | 1 | **Installable web app (PWA)**, not a native app | The core moment is a tired person scanning a QR. A link works with no install and no app store. It is also an upgrade of the existing web app, not a rewrite, and avoids the yearly store fee. |
 | 2 | **Supabase**: one Postgres database, plus auth and private file storage. **Flask backend kept.** | One free account covers users, trips, boxes, items, login and photos. Postgres has a vector extension, so semantic search can move into the database. The Python stack stays, so the AI pieces stay in Python. |
-| 3 | **AI runs on the user's phone by default.** Cloud AI is opt-in, off by default, per batch, with an explicit warning and a preview of what is sent (see "Naming items from photos" below). The user always confirms names. | Photos inside homes should not go to a third party without the user knowing. A small on-device model names generic items well and specific products poorly, so the confirm step is part of the design. |
+| 3 | **AI runs on our own server, not a third party's.** Photos are named by a small open-source model that runs inside the app's own server, so no photo goes to an AI company. Any cloud AI would be opt-in, off by default, per batch, with an explicit warning and a preview of what is sent (see "Naming items from photos" below). The user always confirms names. | Photos inside homes should not go to a third party without the user knowing. The first plan was to run the model on the user's phone, but the download is large and slow on cheap phones. Measurements showed the photo half of the model fits on the free server (see "What we built"). A small model names generic items well and specific products poorly, so the confirm step is part of the design. |
 | 4 | **Batch flow.** Take photos at your own pace, upload together, the AI names the whole batch, one review screen with a weight field per item. Later: tap-to-crop, then "scan a pile" with automatic cropping. | Reviewing one photo at a time is frustrating while packing. Items wrapped in bubble wrap cannot be named by any AI, so photos must be taken before wrapping. Automatic pile detection is the hardest part and is a stretch goal. |
 | 5 | **Accounts with email verification** and reset by email. Many trips per user, with archive and delete. **A viewer password per trip**; the QR contains no secret. Roles: owner and viewer (collaborator later). | The person receiving the boxes should not need an account. A QR with a secret in it would show the contents to anyone who scans it, including a delivery person. The owner can change the viewer password at any time. |
 | 6 | **Privacy rules** (below) | Photos taken inside homes are sensitive, and India's data protection law applies to anyone who runs this for others. |
@@ -70,8 +70,16 @@ Findings:
   Caveats: the searches were written after seeing the items and many are plain words ("hdmi", "raspberry pi"); real searches will be vaguer and score lower. 78 photos is still smaller than a real home.
 - **Not yet measured:** speed and download size on a real phone; SmolVLM-500M; larger self-hosted models such as the Qwen or Gemma families; how to run the text half (needed to read what the user types) on a small server. This table will be updated.
 
+### What we built (October 2026)
+- **Only the photo half of the model runs on the server.** The model has a photo half and a text half. The text half is too big for a free 512 MB server, so it is not loaded at all. Instead the numbers for a fixed list of 512 everyday item names (`naming_data/`) were worked out once, ahead of time (`tools/build_labels.py`), and shipped as a small file. Naming a photo means comparing its numbers with that file.
+- **Compressed:** the photo half is 4-bit (58 MB). On a Mac, the app, the typed-search model and the photo half together peaked at about 350 MB. This is not yet measured on the real server (Linux, shared CPU), so it must be re-checked after deploying.
+- **Accuracy** on 34 photos of real household items, with a list that includes their names (so an optimistic test): first suggestion right 28 of 34 (82%), right name within the top three 31 of 34 (91%). With names the list was not written to match, results were lower (see the strict rows above). Names below a 10% confidence become "Unidentified item"; below 30% the review screen asks the person to check.
+- **Speed:** about 0.1 to 0.2 seconds per photo on a laptop; slower on the free server's shared CPU.
+- **Limits:** it can only suggest names from the list. Anything else is "Unidentified item" for the user to name. Photo search by typed words (comparing typed text with photo numbers) needs the text half and is **not built**; typed search still works on item names and tags.
+- **Things tried and dropped:** running the AI in a separate free Hugging Face Space (Docker Spaces now need a paid plan); loading each half only when needed (memory was not given back, so it stayed near 500 MB); 4-bit and trimmed-dictionary variants of the text half (fit on a laptop, but still too large next to the app).
+
 ### Product design that follows
-0. **Search the photos themselves (main path).** Each photo's image numbers are stored when it is uploaded, and a search compares what the user types with them. No item needs a correct name for it to be found. This is the feature that removes the need to review every name.
+0. **Search the photos themselves (dropped for now: needs the text half of the model, see "What we built").** Each photo's image numbers are stored when it is uploaded, and a search compares what the user types with them. No item needs a correct name for it to be found. This is the feature that removes the need to review every name.
 1. **Suggestions, not single guesses.** Show the top three names under each photo as tap buttons, plus "type your own". The right answer is among the top three 53 to 62% of the time, so most items cost one tap.
 2. **"Unidentified item"** when nothing is close, with the photo kept so the user can name it.
 3. **Learn from corrections.** When the user confirms a name, remember that photo's numbers and suggest the same name for similar photos (no extra download).
@@ -99,7 +107,7 @@ Before shipping any cloud option: confirm the provider's current terms and check
 
 0. Repo, branding, sample data, README, this document
 1. Database layout, sign-up and login (Supabase)
-2. Batch upload and review screen, with on-device naming
+2. Batch upload and review screen, with naming on our own server (done)
 3. Trips, archive and delete, viewer password, in-app QR labels
 4. Tap-to-crop, then "scan a pile"
 5. Test with real users, measure the AI's accuracy, write the report
@@ -107,7 +115,7 @@ Before shipping any cloud option: confirm the provider's current terms and check
 ## How success will be measured
 
 - **Search:** run a fixed set of test queries over a real inventory and report how often the right item is in the top 3, for keyword search versus meaning-based search.
-- **Naming:** compare the on-device model's suggested names against hand-written names for the same photos; report the share named correctly, and the share fixed by the user.
+- **Naming:** compare the model's suggested names against hand-written names for the same photos; report the share named correctly, and the share fixed by the user.
 - **Users:** a small test with real movers; report what confused them.
 
 ## Where the build stands
@@ -118,12 +126,13 @@ Before shipping any cloud option: confirm the provider's current terms and check
 - Done and tested: search inside a trip. The meaning-search database function was checked against the real project with the real model.
 - Known limits: the search model is English only, and its cutoff is untuned (short item names with no tags give loose matches).
 - Done and tested: editing (text, weight, photo replace and removal, moving between boxes), trip renaming, and the password-reset email.
-- Next: measuring search quality on a real inventory, then batch capture with on-device naming.
+- Done and tested: batch capture. Choose up to 20 photos, each becomes an item named by the AI (or "Unidentified item"), and one review screen lets the person fix names with one tap from the top three suggestions. 100 automated tests.
+- Next: a custom email sender, deploying with an invite code, trying it on a real phone, then the viewer password and in-app QR labels.
 
 ## Known risks
 
 - Free tiers change. Quotas and sleep behaviour must be re-checked at launch.
 - **Email:** Supabase's built-in email sender is for testing only. Sources report about 2 emails per hour, delivery to spam, and silent failures once the cap is hit. Before real users, set up a custom SMTP provider (for example Resend, Brevo, SendGrid or Mailgun) with a verified sender, and confirm the current limits on the provider's own pages.
-- On-device models are slow on cheap phones and need a first-time download.
+- The photo model's memory use is measured on a laptop only; on Render's free 512 MB it must be re-checked, and the first photo after a sleep is slow while the model loads.
 - Phone screens can pause background work on iPhones; batches are processed in chunks and uploads must resume.
 - Free storage (about 500 MB) fills quickly with photos; they are resized to keep that manageable.

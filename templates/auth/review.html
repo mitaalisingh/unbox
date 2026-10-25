@@ -1,0 +1,34 @@
+{% extends "auth/base.html" %}
+{% block title %}Check the names · Unbox{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('trips') }}">Trips</a>
+  <a class="chip" href="{{ back }}">Back to the box</a>
+</div>
+<h1>Check the names</h1>
+<p class="lead">{{ made|length }} item{{ '' if made|length == 1 else 's' }} saved. Names were suggested automatically. Change only the ones that are wrong. Tap a suggestion, or type your own.</p>
+
+<form method="post" action="{{ url_for('review', tid=trip.id) }}">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="back" value="{{ back }}">
+  <ul class="stack">
+  {% for m in made %}
+    <li class="glass" style="padding:12px;display:flex;gap:12px;align-items:flex-start">
+      <input type="hidden" name="id" value="{{ m.id }}">
+      <input type="hidden" name="old_{{ m.id }}" value="{{ m.name }}">
+      {% if urls.get(m.path) %}<img src="{{ urls[m.path] }}" alt="" style="width:88px;height:88px;object-fit:cover;border-radius:12px;flex:none">{% endif %}
+      <div style="flex:1;min-width:0">
+        <input id="n_{{ m.id }}" name="name_{{ m.id }}" value="{{ m.name }}" maxlength="80" autocomplete="off" aria-label="Item name">
+        {% if m.check %}<p class="muted small" style="margin:4px 0">Not sure about this one. Please check it.</p>{% endif %}
+        <div class="chips" style="margin-top:6px">
+          {% for g in m.guesses %}
+            <button type="button" class="chip" onclick="document.getElementById('n_{{ m.id }}').value=this.textContent.trim()">{{ g }}</button>
+          {% endfor %}
+        </div>
+      </div>
+    </li>
+  {% endfor %}
+  </ul>
+  <button class="primary" type="submit">Done</button>
+</form>
+{% endblock %}

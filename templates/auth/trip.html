@@ -58,7 +58,18 @@
   {% elif not boxes %}<p class="muted">Nothing here yet. Add a box or an item below.</p>{% endif %}
 
   <details class="glass addbox" {{ 'open' if not boxes and not items }}>
-    <summary>Add to {{ node.name if node else trip.name }}</summary>
+    <summary>📷 Add items from photos</summary>
+    <form method="post" action="{{ url_for('capture', tid=trip.id) }}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="parent_id" value="{{ node.id if node else '' }}">
+      <label>Photos (up to 20, one item per photo) <input type="file" name="photos" accept="image/*" multiple required></label>
+      <p class="muted small">Each photo is named automatically on our own server, and you fix any that are wrong on the next screen. Location data is removed from photos.</p>
+      <button class="primary" type="submit">Upload and name</button>
+    </form>
+  </details>
+
+  <details class="glass addbox">
+    <summary>＋ Add a box, or type an item yourself</summary>
     <form method="post" action="{{ url_for('add_node', tid=trip.id) }}" enctype="multipart/form-data">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="parent_id" value="{{ node.id if node else '' }}">
