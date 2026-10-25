@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 
-from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
 import naming
 import search as searchlib
 from images import BadImage, clean_photo
@@ -647,6 +647,77 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
 
     MAX_BATCH = 20
 
+    def photo_to_item(token, tid, parent_id, raw, position):
+        """One photo becomes one item named by the AI's best guess. Returns its details, or None if it couldn't be saved."""
+        try:
+            image = clean_photo(raw)
+        except BadImage:
+            return None
+        try:
+            guesses = suggest_names(image)
+        except Exception:                                          # a model problem must never lose the photo
+            guesses = []
+        name = naming.best_name(guesses)
+        nid = str(uuid.uuid4())
+        path = f"{tid}/{nid}.jpg"
+        try:
+            client.upload(BUCKET, path, token, image)
+            client.insert("nodes", token, {"id": nid, "trip_id": tid, "parent_id": parent_id, "is_box": False, "name": name,
+                                           "tags": "", "description": "", "weight_kg": None, "photo_path": path,
+                                           "position": position, **embedding_field(name, "", "")})
+        except SupabaseError:
+            try:
+                client.remove(BUCKET, [path], token)
+            except SupabaseError:
+                pass
+            return None
+        return {"id": nid, "name": name, "path": path, "guesses": [g[0] for g in guesses],
+                "check": not guesses or guesses[0][1] < naming.CHECK}
+
+    @app.route("/trips/<tid>/capture-one", methods=["POST"])
+    @login_required
+    def capture_one(tid):
+        """The page sends photos one at a time (so it can show progress and never runs into a time limit)."""
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        parent_id = (request.form.get("parent_id") or "").strip() or None
+        if parent_id:
+            parent = client.select("nodes", token, {"select": "id,is_box", "id": f"eq.{trip_id_or_404(parent_id)}", "trip_id": f"eq.{tid}"})
+            if not parent or not parent[0]["is_box"]:
+                return jsonify(error="Items can only be added inside a box."), 400
+        photo = request.files.get("photo")
+        siblings = client.select("nodes", token, {"select": "id", "trip_id": f"eq.{tid}", "parent_id": f"eq.{parent_id}" if parent_id else "is.null"})
+        item = photo_to_item(token, tid, parent_id, photo.read(), len(siblings) + 1) if photo else None
+        if not item:
+            return jsonify(error="That photo couldn't be used."), 400
+        return jsonify(id=item["id"], name=item["name"], guesses=item["guesses"], check=item["check"])
+
+    @app.route("/trips/<tid>/review-show", methods=["POST"])
+    @login_required
+    def review_show(tid):
+        """The review screen for photos the page just sent one by one. Names and photos come from the database;
+        only the suggestion text comes from the page, and it is just shown as text."""
+        import json
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        try:
+            sent = json.loads(request.form.get("results", "[]"))[:MAX_BATCH]
+            wanted = {trip_id_or_404(r["id"]): r for r in sent}
+        except (ValueError, TypeError, KeyError, AttributeError):
+            abort(400)
+        rows = [n for n in load_nodes(tid, token) if n["id"] in wanted and not n["is_box"]]
+        if not rows:
+            return redirect(url_for("trip_view", tid=tid))
+        urls = client.sign_many(BUCKET, [n.get("photo_path") for n in rows], token)
+        made = [{"id": n["id"], "name": n["name"], "path": n.get("photo_path"),
+                 "guesses": [str(g)[:80] for g in (wanted[n["id"]].get("guesses") or [])[:3]],
+                 "check": bool(wanted[n["id"]].get("check"))} for n in rows]
+        back = safe_next(request.form.get("back", ""), url_for("trip_view", tid=tid))
+        return render_template("auth/review.html", trip=get_trip(tid, token), made=made, urls=urls, back=back,
+                               unidentified=naming.UNKNOWN)
+
     @app.route("/trips/<tid>/capture", methods=["POST"])
     @login_required
     def capture(tid):
@@ -671,33 +742,12 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         position = len(client.select("nodes", token, {"select": "id", "trip_id": f"eq.{tid}", "parent_id": f"eq.{parent_id}" if parent_id else "is.null"}))
         made, skipped = [], 0
         for f in files:
-            try:
-                image = clean_photo(f.read())
-            except BadImage:
-                skipped += 1
-                continue
-            try:
-                guesses = suggest_names(image)
-            except Exception:                                      # a model problem must never lose the photo
-                guesses = []
-            name = naming.best_name(guesses)
-            nid = str(uuid.uuid4())
-            path = f"{tid}/{nid}.jpg"
-            try:
-                client.upload(BUCKET, path, token, image)
+            item = photo_to_item(token, tid, parent_id, f.read(), position + 1)
+            if item:
                 position += 1
-                client.insert("nodes", token, {"id": nid, "trip_id": tid, "parent_id": parent_id, "is_box": False, "name": name,
-                                               "tags": "", "description": "", "weight_kg": None, "photo_path": path,
-                                               "position": position, **embedding_field(name, "", "")})
-            except SupabaseError:
+                made.append(item)
+            else:
                 skipped += 1
-                try:
-                    client.remove(BUCKET, [path], token)
-                except SupabaseError:
-                    pass
-                continue
-            made.append({"id": nid, "name": name, "path": path, "guesses": [g[0] for g in guesses],
-                         "check": not guesses or guesses[0][1] < naming.CHECK})
         if skipped:
             flash(f"{skipped} photo{'s' if skipped != 1 else ''} couldn't be used and {'were' if skipped != 1 else 'was'} skipped.")
         if not made:

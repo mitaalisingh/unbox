@@ -840,3 +840,38 @@ def test_too_many_wrong_codes_locks_guessing_for_a_while(client, fake, monkeypat
         post(client, "/signup", {**FORM, "invite": f"guess{i}"})
     assert post(client, "/signup", {**FORM, "invite": "friends2026"}).status_code == 400   # even the right one waits
     assert fake.signup_calls == []
+
+
+# ================= capture one photo at a time (what the page's script calls) =================
+def test_capture_one_saves_a_named_item_and_returns_json(fake):
+    app, _ = capture_app(fake)
+    client = app.test_client()
+    tid = logged_in_trip(client, fake)
+    r = client.post(f"/trips/{tid}/capture-one", data={"csrf": csrf(client), "parent_id": "", "photo": (io.BytesIO(photo_with_gps()), "p.jpg")},
+                    content_type="multipart/form-data")
+    j = r.get_json()
+    assert r.status_code == 200 and j["name"] == "water bottle" and j["guesses"][:2] == ["water bottle", "flask"] and j["check"] is False
+    assert fake.tables["nodes"][0]["id"] == j["id"] and fake.tables["nodes"][0]["photo_path"] in fake.storage
+
+
+def test_capture_one_refuses_bad_photos_and_strangers(fake):
+    app, _ = capture_app(fake)
+    mine, other = app.test_client(), app.test_client()
+    tid = logged_in_trip(mine, fake)
+    logged_in_trip(other, fake, email="b@example.com", name="Theirs")
+    bad = mine.post(f"/trips/{tid}/capture-one", data={"csrf": csrf(mine), "photo": (io.BytesIO(b"nope"), "p.jpg")}, content_type="multipart/form-data")
+    assert bad.status_code == 400 and not fake.tables["nodes"]
+    theirs = other.post(f"/trips/{tid}/capture-one", data={"csrf": csrf(other), "photo": (io.BytesIO(photo_with_gps()), "p.jpg")}, content_type="multipart/form-data")
+    assert theirs.status_code == 404 and not fake.tables["nodes"]
+
+
+def test_review_show_lists_the_saved_items_with_their_suggestions(fake):
+    import json
+    app, _ = capture_app(fake)
+    client = app.test_client()
+    tid = logged_in_trip(client, fake)
+    j = client.post(f"/trips/{tid}/capture-one", data={"csrf": csrf(client), "photo": (io.BytesIO(photo_with_gps()), "p.jpg")}, content_type="multipart/form-data").get_json()
+    results = json.dumps([j, {"id": "00000000-0000-0000-0000-000000000000", "guesses": ["ghost"]}])      # unknown ids are ignored
+    page = client.post(f"/trips/{tid}/review-show", data={"csrf": csrf(client), "results": results, "back": f"/trips/{tid}"}).get_data(as_text=True)
+    assert "1 item saved" in page and "water bottle" in page and "ghost" not in page
+    assert client.post(f"/trips/{tid}/review-show", data={"csrf": csrf(client), "results": "not json"}).status_code == 400
