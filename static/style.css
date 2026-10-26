@@ -222,3 +222,5 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .dots{display:flex;gap:8px;justify-content:center;margin-top:14px}
 .dots span{width:8px;height:8px;border-radius:50%;background:var(--edge)}
 .dots span.on{background:var(--paper)}
+
+.codebox{font:600 28px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-align:center;background:#000;border:1px dashed var(--paper);border-radius:14px;padding:16px 8px;color:var(--ink);user-select:all;margin:12px 0}

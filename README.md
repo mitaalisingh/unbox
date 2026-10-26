@@ -51,12 +51,13 @@ What exists and has been tested against a real Supabase project:
 - **Add your items flow:** one button asks where items go: loose items, or a new sub storage (a box, bag or drawer, named by you). Then photos (named by the AI) or typed in, one after another. Items show as a grid or a swipe view. A loose item dragged (press and hold on a phone) onto a sub storage asks "Move this into …?" and moves on yes.
 - **Lock a trip:** once you've added everything, lock it from the trip's ⋯ menu and the owner sees view-only mode too, with no add, edit, delete or drag controls (the server refuses changes as well). Unlock to edit again. **All items** shows every item at once; **By storage** groups them by sub storage.
 - **Details under each photo:** in the swipe view every item shows a Details card (weight, tags, note). The owner can add or change weight and note right there, and can enter weights straight after an upload on the review screen. The same card is shown read-only to viewers.
+- **Trip codes:** the owner makes a one-time code (shown once, stored only scrambled, valid 7 days, can be switched off). A friend with an account enters it on their Trips page and a full copy of the trip (boxes, items, weights, notes and photos) lands in their account. It is a copy: the viewer password, lock and code are not carried over, and edits on either side don't affect the other. Wrong guesses are limited.
 - **Editing:** rename a box or item, change its tags, note and weight, replace or remove its photo (removing deletes the file), move it into another box, and rename a trip. Edits refresh the item's search numbers.
 - **Delete means delete:** removing an item, a box or a trip also removes its photo files. If the files can't be removed, nothing is deleted.
 - **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
 - **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
 
-Automated tests (133, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
+Automated tests (141, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
 
 ```bash
 pip install -r requirements-dev.txt

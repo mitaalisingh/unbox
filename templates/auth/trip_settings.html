@@ -5,9 +5,9 @@
   <a class="chip" href="{{ url_for('trips') }}">Trips</a>
   <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
 </div>
-{% set only = section %}
-<h1>{{ 'Rename trip' if only == 'rename' else 'Viewer password' }}</h1>
-{% if only != 'rename' %}<section class="glass addbox" id="share">
+<h1>{{ {'rename': 'Rename trip', 'copy': 'Share a copy', 'share': 'Viewer password'}[section] }}</h1>
+{% if section == 'share' %}
+<section class="glass addbox" id="share">
   <h2 style="margin-top:0">Share with a viewer password</h2>
   <p class="muted small">{% if trip.viewer_pw_set_at %}A viewer password is set. Anyone with it can look at everything in this trip (they can't change anything).{% else %}Not shared yet. Set a password, print the QR labels, and whoever you give the password to can scan a box and see what's inside, without an account.{% endif %}</p>
   <form method="post" action="{{ url_for('set_viewer_password', tid=trip.id) }}">
@@ -17,9 +17,8 @@
     {% if trip.viewer_pw_set_at %}<button class="danger" type="submit" name="remove" value="1" formnovalidate onclick="return confirm('Turn sharing off? Scanning a label will show nothing.')">Turn sharing off</button>{% endif %}
   </form>
 </section>
-<p><a class="chip solid" href="{{ url_for('labels', tid=trip.id) }}">🏷 Print QR labels</a></p>{% endif %}
-{% if only == 'rename' %}
-
+<p><a class="chip solid" href="{{ url_for('labels', tid=trip.id) }}">🏷 Print QR labels</a></p>
+{% elif section == 'rename' %}
 <section class="glass addbox" id="rename">
   <h2 style="margin-top:0">Rename this trip</h2>
   <form method="post" action="{{ url_for('rename_trip', tid=trip.id) }}">
@@ -28,6 +27,21 @@
     <button class="primary" type="submit">Save name</button>
   </form>
 </section>
+{% else %}
+<section class="glass addbox" id="copy">
+  <h2 style="margin-top:0">Trip code</h2>
+  <p class="muted small">Give a friend this code. They enter it on their Trips page, and a full copy of this trip (boxes, items and photos) is added to their account. Their copy is theirs: changes there don't change yours.</p>
+  {% if new_code %}
+    <p class="codebox" id="the-code">{{ new_code }}</p>
+    <p class="muted small">This is the only time the code is shown. It works for 7 days. Turn it off once your friend has copied the trip.</p>
+  {% elif trip.share_code_expires_at %}
+    <p class="muted small">A code is active until {{ trip.share_code_expires_at[:10] }}. For safety it can't be shown again. Make a new one to replace it.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('share_code', tid=trip.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <button class="primary compact" type="submit">{{ 'Make a new code' if (new_code or trip.share_code_expires_at) else 'Make a trip code' }}</button>
+    {% if new_code or trip.share_code_expires_at %}<button class="chip" type="submit" name="off" value="1" style="display:block;margin:10px auto 0">Turn the code off</button>{% endif %}
+  </form>
+</section>
 {% endif %}
-
 {% endblock %}

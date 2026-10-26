@@ -1245,3 +1245,126 @@ def test_details_card_is_hidden_until_something_is_entered(fake, app):
     assert 'class="details" hidden' in plain and 'class="details" >' not in plain
     assert 'class="details" hidden' not in heavy and "2.5 kg" in heavy
     assert "Weight &amp; note" in plain                       # the owner can still add them
+
+
+# ================= trip codes: a copy of a trip goes into a friend's account =================
+import re as _re
+
+
+def make_code(owner, tid):
+    page = post(owner, f"/trips/{tid}/share-code", {}).headers["Location"]
+    html = owner.get(page).get_data(as_text=True)
+    return _re.search(r'id="the-code">([A-Z0-9-]+)<', html).group(1)
+
+
+def friend_client(app, fake, email="friend@example.com"):
+    friend = app.test_client()
+    make_user(fake, email)
+    login(friend, email)
+    return friend
+
+
+def test_the_trip_code_is_shown_once_and_only_a_scrambled_copy_is_stored(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    code = make_code(owner, tid)
+    assert _re.fullmatch(r"[A-Z2-9]{5}-[A-Z2-9]{5}", code)
+    trip = fake.tables["trips"][0]
+    assert trip["share_code_hash"] and code.replace("-", "") not in str(trip.values()) and trip["share_code_expires_at"]
+    again = owner.get(f"/trips/{tid}/settings?section=copy").get_data(as_text=True)
+    assert code not in again and "can't be shown again" in again                      # never shown a second time
+    assert code not in owner.get(f"/trips/{tid}").get_data(as_text=True)
+
+
+def test_entering_a_trip_code_copies_the_whole_trip_into_the_friends_account(fake, app):
+    owner, tid, big = shared_trip(fake, app, password="welcome")
+    lamp = next(n for n in fake.tables["nodes"] if n["name"] == "Secret lamp")
+    lamp["weight_kg"], lamp["description"] = 1.2, "Handle with care"
+    add(owner, tid, {"name": "Loose spoon"})
+    lock(owner, tid)
+    code = make_code(owner, tid)
+    friend = friend_client(app, fake)
+    r = post(friend, "/trips/import", {"code": code.lower()})                               # case does not matter
+    assert r.status_code == 302
+    mine = [t for t in fake.tables["trips"] if t["owner_id"] == fake.users["friend@example.com"]["id"]]
+    assert len(mine) == 1 and mine[0]["name"] == "Move" and mine[0]["id"] != tid and r.headers["Location"].endswith(mine[0]["id"])
+    assert not mine[0].get("viewer_pw_hash") and not mine[0].get("locked_at") and not mine[0].get("share_code_hash")   # the lock, password and code stay behind
+    copies = [n for n in fake.tables["nodes"] if n["trip_id"] == mine[0]["id"]]
+    assert sorted(n["name"] for n in copies) == ["Big box", "Loose spoon", "Secret lamp"]
+    box = next(n for n in copies if n["name"] == "Big box"); lamp2 = next(n for n in copies if n["name"] == "Secret lamp")
+    assert lamp2["parent_id"] == box["id"] and box["id"] != big and lamp2["weight_kg"] == 1.2 and lamp2["description"] == "Handle with care"
+    assert lamp2["photo_path"] and lamp2["photo_path"].startswith(mine[0]["id"] + "/") and lamp2["photo_path"] != lamp["photo_path"]
+    assert fake.storage[lamp2["photo_path"]] == fake.storage[lamp["photo_path"]]            # the photo came along
+    page = friend.get(f"/trips/{mine[0]['id']}").get_data(as_text=True)
+    assert "Big box" in page and "Add your items" in page                                    # and it can be edited, unlike a locked original
+
+
+def test_the_copy_is_independent_of_the_original(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    code = make_code(owner, tid)
+    friend = friend_client(app, fake)
+    post(friend, "/trips/import", {"code": code})
+    mine = next(t for t in fake.tables["trips"] if t["owner_id"] == fake.users["friend@example.com"]["id"])
+    copy_lamp = next(n for n in fake.tables["nodes"] if n["trip_id"] == mine["id"] and n["name"] == "Secret lamp")
+    post(friend, f"/trips/{mine['id']}/n/{copy_lamp['id']}/delete")
+    assert any(n["trip_id"] == tid and n["name"] == "Secret lamp" for n in fake.tables["nodes"])    # the original is untouched
+    assert tid not in friend.get("/trips").get_data(as_text=True)                                      # and the friend never gets the original
+
+
+def test_wrong_expired_and_switched_off_codes_are_refused(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    code = make_code(owner, tid)
+    friend = friend_client(app, fake)
+    assert "isn&#39;t right" in post(friend, "/trips/import", {"code": "AAAAA-BBBBB"}, follow_redirects=True).get_data(as_text=True)
+    assert post(friend, "/trips/import", {"code": ""}, follow_redirects=True).status_code == 200
+    fake.tables["trips"][0]["share_code_expires_at"] = "2000-01-01T00:00:00+00:00"           # expired
+    assert "isn&#39;t right" in post(friend, "/trips/import", {"code": code}, follow_redirects=True).get_data(as_text=True)
+    fake.tables["trips"][0]["share_code_expires_at"] = "2999-01-01T00:00:00+00:00"
+    post(owner, f"/trips/{tid}/share-code", {"off": "1"})
+    assert fake.tables["trips"][0]["share_code_hash"] is None
+    assert "isn&#39;t right" in post(friend, "/trips/import", {"code": code}, follow_redirects=True).get_data(as_text=True)
+    assert len([t for t in fake.tables["trips"] if t["owner_id"] == fake.users["friend@example.com"]["id"]]) == 0
+
+
+def test_guessing_trip_codes_is_slowed_down(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    code = make_code(owner, tid)
+    friend = friend_client(app, fake)
+    for i in range(10):
+        post(friend, "/trips/import", {"code": f"GUESS-{i:04d}"})
+    page = post(friend, "/trips/import", {"code": code}, follow_redirects=True).get_data(as_text=True)
+    assert "Too many wrong codes" in page
+    assert not [t for t in fake.tables["trips"] if t["owner_id"] == fake.users["friend@example.com"]["id"]]
+
+
+def test_only_the_owner_can_make_or_switch_off_a_trip_code(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    stranger = friend_client(app, fake, "stranger@example.com")
+    assert post(stranger, f"/trips/{tid}/share-code", {}).status_code == 404
+    assert not fake.tables["trips"][0].get("share_code_hash")
+    assert app.test_client().post(f"/trips/{tid}/share-code", data={}).status_code in (302, 400)
+
+
+def test_a_photo_that_cannot_be_copied_does_not_stop_the_copy(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    lamp = next(n for n in fake.tables["nodes"] if n["name"] == "Secret lamp")
+    fake.fail_copy_for = {lamp["photo_path"]}
+    code = make_code(owner, tid)
+    friend = friend_client(app, fake)
+    post(friend, "/trips/import", {"code": code})
+    mine = next(t for t in fake.tables["trips"] if t["owner_id"] == fake.users["friend@example.com"]["id"])
+    copy_lamp = next(n for n in fake.tables["nodes"] if n["trip_id"] == mine["id"] and n["name"] == "Secret lamp")
+    assert copy_lamp["photo_path"] is None
+
+
+def test_a_failed_copy_leaves_nothing_behind(fake, app, monkeypatch):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    code = make_code(owner, tid)
+    friend = friend_client(app, fake)
+    from sbclient import SupabaseError
+    def boom(table, token, rows):
+        raise SupabaseError("nope", 500)
+    monkeypatch.setattr(fake, "insert_many", boom)
+    page = post(friend, "/trips/import", {"code": code}, follow_redirects=True).get_data(as_text=True)
+    assert "Nothing was added" in page
+    assert not [t for t in fake.tables["trips"] if t["owner_id"] == fake.users["friend@example.com"]["id"]]
+    assert not [p for p in fake.storage if not p.startswith(tid + "/")]                       # copied photos were removed again

@@ -8,6 +8,7 @@ sends the USER'S token with every database call. The database's row-level rules 
 see, so a bug here cannot expose another person's trips.
 """
 import hashlib
+import hmac
 import os
 import re
 import secrets
@@ -410,15 +411,18 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     # ---------------- boxes and items inside a trip ----------------
     NODE_COLUMNS = "id,trip_id,parent_id,is_box,name,description,tags,weight_kg,photo_path,position"
 
+    TRIP_COLUMNS = ("id,name,archived_at,viewer_pw_set_at,locked_at,share_code_expires_at",
+                    "id,name,archived_at,viewer_pw_set_at,locked_at",
+                    "id,name,archived_at,viewer_pw_set_at")
+
     def get_trip(tid, token):
-        try:
-            rows = client.select("trips", token, {"select": "id,name,archived_at,viewer_pw_set_at,locked_at", "id": f"eq.{tid}"})
-        except SupabaseError as e:
-            if e.status != 400:
-                raise
-            # the database hasn't had its "locked_at" update yet: carry on, with locking switched off
-            rows = client.select("trips", token, {"select": "id,name,archived_at,viewer_pw_set_at", "id": f"eq.{tid}"})
-        return rows[0] if rows else None
+        for columns in TRIP_COLUMNS:
+            try:
+                rows = client.select("trips", token, {"select": columns, "id": f"eq.{tid}"})
+                return rows[0] if rows else None
+            except SupabaseError as e:
+                if e.status != 400 or columns == TRIP_COLUMNS[-1]:     # 400 = the database doesn't have a newer column yet
+                    raise
 
     def lock_guard(tid, token, as_json=False):
         """A locked trip can only be looked at. If this one is locked, return the response to send instead of changing anything."""
@@ -870,6 +874,114 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             flash("Couldn't change the lock. The database may need its latest update first.")
         return redirect(url_for("trip_view", tid=tid))
 
+    # ---------------- trip codes: put a copy of a trip into someone else's account ----------------
+    SHARE_DAYS, MAX_COPY_NODES = 7, 300
+    SHARE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"                 # no 0/O or 1/I to mix up
+    wrong_trip_codes = {}                                                # user id -> times of wrong guesses (memory only)
+
+    def code_hash(code):
+        clean = "".join(ch for ch in (code or "").upper() if ch.isalnum())
+        return hmac.new(secret.encode(), clean.encode(), hashlib.sha256).hexdigest()
+
+    @app.route("/trips/<tid>/share-code", methods=["POST"])
+    @login_required
+    def share_code(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        try:
+            if request.form.get("off"):
+                client.update("trips", token, {"id": f"eq.{tid}"}, {"share_code_hash": None, "share_code_expires_at": None})
+                flash("The trip code is turned off.")
+            else:
+                raw = "".join(secrets.choice(SHARE_ALPHABET) for _ in range(10))
+                code = raw[:5] + "-" + raw[5:]
+                client.update("trips", token, {"id": f"eq.{tid}"}, {
+                    "share_code_hash": code_hash(code),
+                    "share_code_expires_at": (datetime.now(timezone.utc) + timedelta(days=SHARE_DAYS)).isoformat()})
+                session["new_code"] = [tid, code]
+        except SupabaseError:
+            flash("Couldn't do that. The database may need its latest update first.")
+        return redirect(url_for("trip_settings", tid=tid, section="copy"))
+
+    @app.route("/trips/import", methods=["POST"])
+    @login_required
+    def import_trip():
+        user = request.user
+        token = user["token"]
+        now = time.time()
+        recent = [t for t in wrong_trip_codes.get(user["id"], []) if now - t < 900]
+        if len(recent) >= 10:
+            flash("Too many wrong codes. Please wait 15 minutes.")
+            return redirect(url_for("trips"))
+        code = request.form.get("code", "")
+        source = None
+        if "".join(ch for ch in code if ch.isalnum()):
+            try:
+                rows = client.admin_select("trips", {"select": "id,name", "share_code_hash": f"eq.{code_hash(code)}",
+                                                     "share_code_expires_at": f"gte.{datetime.now(timezone.utc).isoformat()}"})
+            except SupabaseError:
+                flash("Trip codes aren't available right now. Please try again later.")
+                return redirect(url_for("trips"))
+            source = rows[0] if rows else None
+        if not source:
+            wrong_trip_codes[user["id"]] = recent + [now]
+            flash("That code isn't right, or it has expired.")
+            return redirect(url_for("trips"))
+        try:
+            nodes = client.admin_select("nodes", {"select": "id,parent_id,is_box,name,description,tags,weight_kg,photo_path,position,embedding",
+                                                  "trip_id": f"eq.{source['id']}"})
+        except SupabaseError:
+            flash("Couldn't read that trip. Please try again.")
+            return redirect(url_for("trips"))
+        if len(nodes) > MAX_COPY_NODES:
+            flash(f"That trip is too big to copy ({len(nodes)} items; the limit is {MAX_COPY_NODES}).")
+            return redirect(url_for("trips"))
+        try:
+            mine = client.insert("trips", token, {"owner_id": user["id"], "name": source["name"]})
+        except SupabaseError:
+            flash("Couldn't create the copy. Please try again.")
+            return redirect(url_for("trips"))
+        new_tid, copied = mine["id"], []
+        try:
+            fresh = {n["id"]: str(uuid.uuid4()) for n in nodes}
+            ordered, placed = [], set()
+            while len(ordered) < len(nodes):                              # parents before the things inside them
+                before = len(ordered)
+                for n in nodes:
+                    if n["id"] not in placed and (not n.get("parent_id") or n["parent_id"] in placed or n["parent_id"] not in fresh):
+                        ordered.append(n); placed.add(n["id"])
+                if len(ordered) == before:
+                    break
+            rows = []
+            for n in ordered:
+                path = None
+                if n.get("photo_path"):
+                    target = f"{new_tid}/{fresh[n['id']]}.jpg"
+                    try:
+                        client.admin_copy(BUCKET, n["photo_path"], target)
+                        path = target
+                        copied.append(target)
+                    except SupabaseError:
+                        path = None                                       # the item is copied without its photo
+                row = {"id": fresh[n["id"]], "trip_id": new_tid, "parent_id": fresh.get(n.get("parent_id")), "is_box": n["is_box"],
+                       "name": n["name"], "description": n.get("description") or "", "tags": n.get("tags") or "",
+                       "weight_kg": n.get("weight_kg"), "photo_path": path, "position": n.get("position") or 0}
+                if n.get("embedding"):
+                    row["embedding"] = n["embedding"]
+                rows.append(row)
+            client.insert_many("nodes", token, rows)
+        except SupabaseError:
+            try:                                                          # leave nothing half-copied behind
+                client.remove(BUCKET, copied, token)
+                client.delete("trips", token, {"id": f"eq.{new_tid}"})
+            except SupabaseError:
+                pass
+            flash("Couldn't finish copying the trip. Nothing was added. Please try again.")
+            return redirect(url_for("trips"))
+        flash(f"Copied “{source['name']}” into your account ({len([n for n in nodes if not n['is_box']])} items).")
+        return redirect(url_for("trip_view", tid=new_tid))
+
     @app.route("/trips/<tid>/settings")
     @login_required
     def trip_settings(tid):
@@ -877,7 +989,14 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         trip = get_trip(tid, token)
         if not trip:
             abort(404)
-        return render_template("auth/trip_settings.html", trip=trip, section="rename" if request.args.get("section") == "rename" else "share")
+        section = request.args.get("section")
+        new_code = None
+        pending = session.get("new_code")
+        if pending and pending[0] == tid and section == "copy":
+            new_code = pending[1]
+            session.pop("new_code", None)                                  # shown once; only a scrambled version is kept
+        return render_template("auth/trip_settings.html", trip=trip, section=section if section in ("rename", "copy") else "share",
+                               new_code=new_code)
 
     @app.route("/trips/<tid>/viewer-password", methods=["POST"])
     @login_required

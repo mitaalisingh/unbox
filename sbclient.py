@@ -101,6 +101,11 @@ class Supabase:
         rows = self._request("POST", f"/rest/v1/{table}", token=token, json_body=row, prefer="return=representation")
         return rows[0] if rows else None
 
+    def insert_many(self, table, token, rows):
+        """Add several rows in one call (as the logged-in user: the row-level rules still apply)."""
+        if rows:
+            self._request("POST", f"/rest/v1/{table}", token=token, json_body=rows, prefer="return=minimal")
+
     def update(self, table, token, match, changes):
         return self._request("PATCH", f"/rest/v1/{table}", token=token, params=match, json_body=changes, prefer="return=representation")
 
@@ -184,3 +189,7 @@ class Supabase:
             if link:
                 out[row["path"]] = link if link.startswith("http") else self.url + (link if link.startswith("/storage/v1") else "/storage/v1" + link)
         return out
+
+    def admin_copy(self, bucket, source, destination):
+        """Copy one stored file to a new path inside the same bucket (server side, nothing is downloaded)."""
+        self._admin("POST", "/storage/v1/object/copy", json_body={"bucketId": bucket, "sourceKey": source, "destinationKey": destination})

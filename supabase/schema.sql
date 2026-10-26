@@ -28,10 +28,14 @@ create table if not exists public.trips (
   archived_at     timestamptz,                      -- archive = hidden but kept; null = active
   viewer_pw_hash  text,                             -- hashed (scrypt or argon2) by the server; never plain text
   viewer_pw_set_at timestamptz,
-  locked_at       timestamptz,                      -- set = the trip is locked (view only, even for the owner)
+  locked_at       timestamptz,
+  share_code_hash text,                             -- scrambled trip code; the code itself is never stored
+  share_code_expires_at timestamptz,                      -- set = the trip is locked (view only, even for the owner)
   created_at      timestamptz not null default now()
 );
 alter table public.trips add column if not exists locked_at timestamptz;
+alter table public.trips add column if not exists share_code_hash text;
+alter table public.trips add column if not exists share_code_expires_at timestamptz;
 create index if not exists trips_owner_idx on public.trips(owner_id);
 
 -- Boxes and items in one table: is_box tells them apart; parent_id nests them.

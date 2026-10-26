@@ -24,6 +24,7 @@ class FakeSupabase:
         self.recover_calls, self.signup_calls = [], []
         self.fail_refresh = False
         self.passwords_set = []
+        self.fail_copy_for = set()
         self.admin_calls = []              # every call made with the server's secret key, in order
         self.tables.setdefault("viewer_attempts", [])
 
@@ -208,3 +209,13 @@ class FakeSupabase:
     def admin_sign_many(self, bucket, paths, expires=3600):
         self.admin_calls.append(("sign", bucket, list(paths)))
         return {p: f"https://files.example/{p}?token=viewer" for p in paths if p and p in self.storage}
+
+    def insert_many(self, table, token, rows):
+        for row in rows:
+            self.insert(table, token, row)
+
+    def admin_copy(self, bucket, source, destination):
+        self.admin_calls.append(("copy", bucket, source, destination))
+        if self.fail_copy_for and source in self.fail_copy_for:
+            raise SupabaseError("The photo couldn't be saved. Please try again.", 500)
+        self.storage[destination] = self.storage[source]

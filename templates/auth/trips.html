@@ -33,6 +33,15 @@
     <button class="primary compact" type="submit">Create trip</button>
   </form>
 </details>
+<details class="glass addbox newtrip">
+  <summary>Add a shared trip <span aria-hidden="true">＋</span></summary>
+  <form method="post" action="{{ url_for('import_trip') }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label>Trip code <input name="code" required maxlength="20" placeholder="e.g. K7M2Q-9XWPD" autocomplete="off" autocapitalize="characters"></label>
+    <button class="primary compact" type="submit">Add this trip</button>
+    <p class="muted small" style="text-align:center">A copy goes into your account. Your changes don't affect the original.</p>
+  </form>
+</details>
 {% if archived %}
 <h2>Archived</h2>
 <ul class="stack">
