@@ -13,6 +13,12 @@
 @keyframes flow{to{stroke-dashoffset:-22}}
 .scan{animation:scan 2.6s ease-in-out infinite alternate}
 @keyframes scan{from{transform:translateY(0)}to{transform:translateY(78px)}}
+.lidmove{transform-box:view-box;transform-origin:200px 217px;animation:lidmove 10s ease-in-out infinite}
+@keyframes lidmove{0%,6%{transform:translateY(0) rotate(0)}16%,70%{transform:translateY(-58px) rotate(-12deg)}82%,100%{transform:translateY(0) rotate(0)}}
+.gin{animation:gin1 10s ease-in infinite}.gin.g2{animation-name:gin2}.gin.g3{animation-name:gin3}
+@keyframes gin1{0%,19%{opacity:0;transform:translate(0,0)}20%{opacity:1}34%{transform:translate(80px,192px);opacity:1}35%,100%{transform:translate(80px,192px);opacity:0}}
+@keyframes gin2{0%,31%{opacity:0;transform:translate(0,0)}32%{opacity:1}46%{transform:translate(0,212px);opacity:1}47%,100%{transform:translate(0,212px);opacity:0}}
+@keyframes gin3{0%,43%{opacity:0;transform:translate(0,0)}44%{opacity:1}58%{transform:translate(-82px,192px);opacity:1}59%,100%{transform:translate(-82px,192px);opacity:0}}
 .shackle{animation:shackle 3.6s ease-in-out infinite}
 @keyframes shackle{0%,30%{transform:translateY(-16px)}45%,85%{transform:translateY(0)}100%{transform:translateY(-16px)}}
 .shake{animation:shake 3.6s ease-in-out infinite}

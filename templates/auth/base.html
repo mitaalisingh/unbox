@@ -14,6 +14,29 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Unbox">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
+<script>
+// The "add items" steps (choose, name a storage, upload, review) are a detour. Finishing it returns to the page it began on,
+// so the browser's Back button then goes to the list, not into the add-items form again.
+window.Flow = (function () {
+  function get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+  return {
+    start: function () { set('flowIdx', '0'); set('flowDest', location.href); },
+    step: function () {
+      var st = history.state || {}, i;
+      if (st.flow == null) { i = (parseInt(get('flowIdx'), 10) || 0) + 1; try { history.replaceState(Object.assign({}, st, { flow: i }), ''); } catch (e) {} }
+      else { i = st.flow; }
+      set('flowIdx', String(i)); return i;
+    },
+    finish: function (dest) {
+      var i = parseInt(get('flowIdx'), 10) || 0, d = get('flowDest');
+      var same = false; try { same = d && dest && new URL(d).pathname === new URL(dest, location.href).pathname; } catch (e) {}      // same page, whatever the ?view or #part
+      if (i > 0 && same) { set('flowIdx', '0'); history.go(-i); return true; }
+      return false;
+    }
+  };
+})();
+</script>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>

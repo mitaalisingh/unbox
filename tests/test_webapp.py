@@ -1716,7 +1716,8 @@ def test_trips_still_show_if_the_database_has_no_cover_column_yet(fake, app, mon
 def test_about_the_creator_is_public_and_reachable(client, fake):
     page = client.get("/about")
     html = page.get_data(as_text=True)
-    assert page.status_code == 200 and "Who am I" in html and "Why Unbox" in html and "github.com/mitaalisingh/unbox" in html
+    assert page.status_code == 200 and "Final-year CSE student" in html and "Why I built Unbox" in html and "github.com/mitaalisingh/unbox" in html
+    assert "Vellore Institute of Technology" in html and "Odissi" in html and "come up with great ideas if I care enough" in html
     assert client.get("/static/about/sketch.svg").status_code == 200 and "about/sketch.svg" in html     # a line drawing unless a photo is added
     assert "About" in client.get("/login").get_data(as_text=True)                                       # linked from the login screens
     make_user(fake)
@@ -1729,3 +1730,19 @@ def test_opening_the_login_link_on_a_new_phone_shows_the_instructions_first(clie
         html = client.get(path).get_data(as_text=True)
         assert "unbox-intro-seen" in html and "location.replace" in html                                 # once per device, via the home page
     assert "unbox-intro-seen" in client.get("/").get_data(as_text=True)                                # the instructions mark themselves as seen
+
+
+def test_page_titles_are_plain_text_and_the_add_flow_pages_track_their_steps(fake, app):
+    """Regression: a script once ended up inside a page title, so the browser tab showed code."""
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    add(owner, tid, {"name": "Big", "kind": "box"})
+    box = fake.tables["nodes"][0]["id"]
+    pages = [f"/trips/{tid}/add", f"/trips/{tid}/add/storage", f"/trips/{tid}/add/items", f"/trips/{tid}", f"/trips/{tid}/n/{box}", "/trips"]
+    for path in pages:
+        html = owner.get(path).get_data(as_text=True)
+        title = _re.search(r"<title>(.*?)</title>", html, _re.S).group(1)
+        assert "<" not in title and "{%" not in title, (path, title)
+    for path in pages[:3]:
+        assert "Flow.step()" in owner.get(path).get_data(as_text=True)                   # these steps are part of the add detour
+    assert "Flow.start()" in owner.get(f"/trips/{tid}").get_data(as_text=True)           # and it begins from the trip page

@@ -61,7 +61,7 @@ What exists and has been tested against a real Supabase project:
 - **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
 - **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
 
-Automated tests (168, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
+Automated tests (169, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
 
 ```bash
 pip install -r requirements-dev.txt

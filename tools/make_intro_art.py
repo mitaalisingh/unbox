@@ -60,6 +60,12 @@ STYLE = """<style>
 @keyframes flow{to{stroke-dashoffset:-22}}
 .scan{animation:scan 2.6s ease-in-out infinite alternate}
 @keyframes scan{from{transform:translateY(0)}to{transform:translateY(78px)}}
+.lidmove{transform-box:view-box;transform-origin:200px 217px;animation:lidmove 10s ease-in-out infinite}
+@keyframes lidmove{0%,6%{transform:translateY(0) rotate(0)}16%,70%{transform:translateY(-58px) rotate(-12deg)}82%,100%{transform:translateY(0) rotate(0)}}
+.gin{animation:gin1 10s ease-in infinite}.gin.g2{animation-name:gin2}.gin.g3{animation-name:gin3}
+@keyframes gin1{0%,19%{opacity:0;transform:translate(0,0)}20%{opacity:1}34%{transform:translate(80px,192px);opacity:1}35%,100%{transform:translate(80px,192px);opacity:0}}
+@keyframes gin2{0%,31%{opacity:0;transform:translate(0,0)}32%{opacity:1}46%{transform:translate(0,212px);opacity:1}47%,100%{transform:translate(0,212px);opacity:0}}
+@keyframes gin3{0%,43%{opacity:0;transform:translate(0,0)}44%{opacity:1}58%{transform:translate(-82px,192px);opacity:1}59%,100%{transform:translate(-82px,192px);opacity:0}}
 .shackle{animation:shackle 3.6s ease-in-out infinite}
 @keyframes shackle{0%,30%{transform:translateY(-16px)}45%,85%{transform:translateY(0)}100%{transform:translateY(-16px)}}
 .shake{animation:shake 3.6s ease-in-out infinite}
@@ -88,11 +94,27 @@ a1 = (g("pulse", corners(70, 70, 330, 330)) + g("bob", cube(200, 215, 78))
       + g("bob2", f'<circle cx="92" cy="108" r="11" fill="{CREAM}"/>') + g("tw", f'<circle cx="312" cy="96" r="7" fill="{ORANGE}"/>')
       + g("bob3", f'<rect x="292" y="288" width="22" height="22" rx="5" fill="{MID}" transform="rotate(18 303 299)"/>')
       + g("bob2", f'<rect x="84" y="276" width="16" height="30" rx="5" fill="{DARK}" transform="rotate(-12 92 291)"/>'))
-# 2: three small parcels dropping into a big one
-a2 = (g("bob", cube(200, 262, 90, top=CREAM))
-      + g("dropin", cube(120, 120, 28, top=MID, left=DARK, right="#542916", tape=False))
-      + g("dropin d2", cube(200, 100, 28, top=CREAM, left=MID, right=DARK))
-      + g("dropin d3", cube(282, 120, 28, top=MID, left=DARK, right="#542916", tape=False)))
+# 2: the big box opens, three small parcels fall in one by one, and the box closes again (10 s loop)
+def box_pieces(cx, cy, size):
+    A, B, C, D = (cx, cy - size), (cx + K * size, cy - size / 2), (cx, cy), (cx - K * size, cy - size / 2)
+    L1, L2, R2 = (cx - K * size, cy + size / 2), (cx, cy + size), (cx + K * size, cy + size / 2)
+    return A, B, C, D, L1, L2, R2
+
+
+def small(cx, cy, cls):
+    return f'<g class="{cls}">{cube(cx, cy, 28, top=MID, left=DARK, right="#542916", tape=False)}</g>'
+
+
+A_, B_, C_, D_, L1_, L2_, R2_ = box_pieces(200, 262, 90)
+lid_up = 8
+lid = (f'<polygon points="{pts(D_, C_, (C_[0], C_[1] + 9), (D_[0], D_[1] + 9))}" fill="#8a6c3a"/>'
+       f'<polygon points="{pts(C_, B_, (B_[0], B_[1] + 9), (C_[0], C_[1] + 9))}" fill="#7a2c16"/>'
+       f'<polygon points="{pts(A_, B_, C_, D_)}" fill="{CREAM}"/>'
+       f'<polygon points="{pts((A_[0] + (D_[0] - A_[0]) * .38, A_[1] + (D_[1] - A_[1]) * .38), (A_[0] + (D_[0] - A_[0]) * .62, A_[1] + (D_[1] - A_[1]) * .62), (B_[0] + (C_[0] - B_[0]) * .62, B_[1] + (C_[1] - B_[1]) * .62), (B_[0] + (C_[0] - B_[0]) * .38, B_[1] + (C_[1] - B_[1]) * .38))}" fill="{ORANGE}"/>')
+a2 = (f'<polygon points="{pts(A_, B_, C_, D_)}" fill="#1a0d06"/>'                                   # the inside of the box
+      + small(120, 100, "gin g1") + small(200, 84, "gin g2") + small(282, 100, "gin g3")             # they fall behind the front of the box
+      + f'<polygon points="{pts(D_, C_, L2_, L1_)}" fill="{MID}"/><polygon points="{pts(C_, B_, R2_, L2_)}" fill="{DARK}"/>'
+      + f'<g class="lidmove">{lid}</g>')
 # 3: a parcel with a QR label that is being scanned
 a3 = (g("bob", cube(200, 205, 110, qr=True))
       + f'<path d="M119.9 175.3 L184.8 212.6" stroke="{TEAL}" stroke-width="5" stroke-linecap="round" class="bx scan"/>'

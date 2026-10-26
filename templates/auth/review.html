@@ -32,4 +32,17 @@
   </ul>
   <button class="primary" type="submit">Done</button>
 </form>
+<script>
+Flow.step();
+(function () {
+  var form = document.querySelector('form[action*="/review"]'), back = {{ back|tojson }};
+  form.addEventListener('submit', function (e) {
+    if (!(parseInt(sessionStorage.getItem('flowIdx'), 10) > 0) || !window.fetch) return;
+    e.preventDefault();
+    fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', redirect: 'manual' })
+      .then(function () { if (!Flow.finish(back)) location.href = back; }, function () { form.submit(); });
+  });
+  document.querySelectorAll('a.chip[href="' + back + '"]').forEach(function (a) { a.addEventListener('click', function (e) { if (Flow.finish(back)) e.preventDefault(); }); });
+})();
+</script>
 {% endblock %}

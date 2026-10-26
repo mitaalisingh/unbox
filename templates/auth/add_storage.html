@@ -15,4 +15,18 @@
   <button class="primary compact" type="submit">Create</button>
   <button class="chip" type="submit" name="next" value="items" style="display:block;margin:10px auto 0">Create and add items to it</button>
 </form>
+{% set dest = url_for('node_view', tid=trip.id, nid=box.id) if box else url_for('trip_view', tid=trip.id) %}
+<script>
+Flow.step();
+(function () {
+  var form = document.querySelector('form.glass'), dest = {{ dest|tojson }};
+  form.addEventListener('submit', function (e) {
+    if (e.submitter && e.submitter.value === 'items') return;            // "create and add items" carries on
+    if (!(parseInt(sessionStorage.getItem('flowIdx'), 10) > 0) || !window.fetch) return;
+    e.preventDefault();
+    fetch(form.action || location.href, { method: 'POST', body: new FormData(form, e.submitter), credentials: 'same-origin', redirect: 'manual' })
+      .then(function () { if (!Flow.finish(dest)) location.href = dest; }, function () { form.submit(); });
+  });
+})();
+</script>
 {% endblock %}

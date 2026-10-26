@@ -13,21 +13,23 @@
 @keyframes flow{to{stroke-dashoffset:-22}}
 .scan{animation:scan 2.6s ease-in-out infinite alternate}
 @keyframes scan{from{transform:translateY(0)}to{transform:translateY(78px)}}
+.lidmove{transform-box:view-box;transform-origin:200px 217px;animation:lidmove 10s ease-in-out infinite}
+@keyframes lidmove{0%,6%{transform:translateY(0) rotate(0)}16%,70%{transform:translateY(-58px) rotate(-12deg)}82%,100%{transform:translateY(0) rotate(0)}}
+.gin{animation:gin1 10s ease-in infinite}.gin.g2{animation-name:gin2}.gin.g3{animation-name:gin3}
+@keyframes gin1{0%,19%{opacity:0;transform:translate(0,0)}20%{opacity:1}34%{transform:translate(80px,192px);opacity:1}35%,100%{transform:translate(80px,192px);opacity:0}}
+@keyframes gin2{0%,31%{opacity:0;transform:translate(0,0)}32%{opacity:1}46%{transform:translate(0,212px);opacity:1}47%,100%{transform:translate(0,212px);opacity:0}}
+@keyframes gin3{0%,43%{opacity:0;transform:translate(0,0)}44%{opacity:1}58%{transform:translate(-82px,192px);opacity:1}59%,100%{transform:translate(-82px,192px);opacity:0}}
 .shackle{animation:shackle 3.6s ease-in-out infinite}
 @keyframes shackle{0%,30%{transform:translateY(-16px)}45%,85%{transform:translateY(0)}100%{transform:translateY(-16px)}}
 .shake{animation:shake 3.6s ease-in-out infinite}
 @keyframes shake{0%,44%,56%,100%{transform:rotate(0)}48%{transform:rotate(-2.5deg)}52%{transform:rotate(2.5deg)}}
 @media (prefers-reduced-motion: reduce){*{animation:none!important}}
 </style>
-<g class="bx bob"><polygon points="122.1,217.0 200.0,262.0 200.0,352.0 122.1,307.0" fill="#B79858"/>
-<polygon points="200.0,262.0 277.9,217.0 277.9,307.0 200.0,352.0" fill="#A13A1E"/>
-<polygon points="200.0,172.0 277.9,217.0 200.0,262.0 122.1,217.0" fill="#FEFAF0"/>
-<polygon points="170.4,189.1 151.7,199.9 229.6,244.9 248.3,234.1" fill="#F1C166"/></g><g class="bx dropin"><polygon points="95.8,106.0 120.0,120.0 120.0,148.0 95.8,134.0" fill="#A13A1E"/>
-<polygon points="120.0,120.0 144.2,106.0 144.2,134.0 120.0,148.0" fill="#542916"/>
-<polygon points="120.0,92.0 144.2,106.0 120.0,120.0 95.8,106.0" fill="#B79858"/></g><g class="bx dropin d2"><polygon points="175.8,86.0 200.0,100.0 200.0,128.0 175.8,114.0" fill="#B79858"/>
-<polygon points="200.0,100.0 224.2,86.0 224.2,114.0 200.0,128.0" fill="#A13A1E"/>
-<polygon points="200.0,72.0 224.2,86.0 200.0,100.0 175.8,86.0" fill="#FEFAF0"/>
-<polygon points="190.8,77.3 185.0,80.7 209.2,94.7 215.0,91.3" fill="#F1C166"/></g><g class="bx dropin d3"><polygon points="257.8,106.0 282.0,120.0 282.0,148.0 257.8,134.0" fill="#A13A1E"/>
-<polygon points="282.0,120.0 306.2,106.0 306.2,134.0 282.0,148.0" fill="#542916"/>
-<polygon points="282.0,92.0 306.2,106.0 282.0,120.0 257.8,106.0" fill="#B79858"/></g>
+<polygon points="200.0,172.0 277.9,217.0 200.0,262.0 122.1,217.0" fill="#1a0d06"/><g class="gin g1"><polygon points="95.8,86.0 120.0,100.0 120.0,128.0 95.8,114.0" fill="#A13A1E"/>
+<polygon points="120.0,100.0 144.2,86.0 144.2,114.0 120.0,128.0" fill="#542916"/>
+<polygon points="120.0,72.0 144.2,86.0 120.0,100.0 95.8,86.0" fill="#B79858"/></g><g class="gin g2"><polygon points="175.8,70.0 200.0,84.0 200.0,112.0 175.8,98.0" fill="#A13A1E"/>
+<polygon points="200.0,84.0 224.2,70.0 224.2,98.0 200.0,112.0" fill="#542916"/>
+<polygon points="200.0,56.0 224.2,70.0 200.0,84.0 175.8,70.0" fill="#B79858"/></g><g class="gin g3"><polygon points="257.8,86.0 282.0,100.0 282.0,128.0 257.8,114.0" fill="#A13A1E"/>
+<polygon points="282.0,100.0 306.2,86.0 306.2,114.0 282.0,128.0" fill="#542916"/>
+<polygon points="282.0,72.0 306.2,86.0 282.0,100.0 257.8,86.0" fill="#B79858"/></g><polygon points="122.1,217.0 200.0,262.0 200.0,352.0 122.1,307.0" fill="#B79858"/><polygon points="200.0,262.0 277.9,217.0 277.9,307.0 200.0,352.0" fill="#A13A1E"/><g class="lidmove"><polygon points="122.1,217.0 200.0,262.0 200.0,271.0 122.1,226.0" fill="#8a6c3a"/><polygon points="200.0,262.0 277.9,217.0 277.9,226.0 200.0,271.0" fill="#7a2c16"/><polygon points="200.0,172.0 277.9,217.0 200.0,262.0 122.1,217.0" fill="#FEFAF0"/><polygon points="170.4,189.1 151.7,199.9 229.6,244.9 248.3,234.1" fill="#F1C166"/></g>
 </svg>

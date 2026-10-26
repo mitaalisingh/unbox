@@ -329,3 +329,8 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .about .proud{padding-left:18px;margin:6px 0}
 .about .proud li{margin-bottom:8px}
 .about .chips{margin:6px 0}
+.about .lede{font-size:18px;color:#fff;line-height:1.5}
+.about .mosaic{padding-left:18px;margin:4px 0 10px}.about .mosaic li{margin-bottom:4px}
+.about .skills{margin:6px 0}.about .skills dt{font-family:Georgia,"Times New Roman",serif;color:#fff;font-size:19px;margin-top:12px}
+.about .skills dd{margin:2px 0 0;color:var(--body);font-size:15.5px;line-height:1.55}
+.about .pull{margin:18px 0 6px;padding:2px 0 2px 16px;border-left:3px solid #F1C166;font:italic 400 22px/1.35 Georgia,"Times New Roman",serif;color:#fff}
