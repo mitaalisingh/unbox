@@ -1,4 +1,5 @@
 {% extends "auth/base.html" %}
+{% from "_items.html" import item_views %}
 {% block title %}{{ node.name if node else trip.name }} · Unbox{% endblock %}
 {% block topbar %}<header class="topbar"><span class="brand">Unbox</span></header>{% endblock %}
 {% block content %}
@@ -38,14 +39,8 @@
 
   {% if items %}
   {% if boxes %}<h2>Loose items</h2>{% endif %}
-  <ul class="grid">
-  {% for i in items %}
-    <li><a class="tile" href="{{ url_for('viewer_view', tid=trip.id, nid=i.id) }}">
-      {% if urls.get(i.photo_path) %}<img src="{{ urls[i.photo_path] }}" alt="">{% else %}<span class="emoji">🔹</span>{% endif %}
-      <span class="cap"><strong>{{ i.name }}</strong>{% if i.weight_kg is not none %}<small>{{ i.weight_kg }} kg</small>{% endif %}</span>
-    </a></li>
-  {% endfor %}
-  </ul>
+  {% set hrefs = {} %}{% for i in items %}{% set _ = hrefs.update({i.id: url_for('viewer_view', tid=trip.id, nid=i.id)}) %}{% endfor %}
+  {{ item_views(items, urls, hrefs) }}
   {% elif not boxes %}<p class="muted">Nothing in here.</p>{% endif %}
 {% endif %}
 {% endblock %}
