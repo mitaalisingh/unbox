@@ -2,8 +2,7 @@
 {% block topbar %}{% endblock %}
 {% block content %}
 <div class="stage" aria-hidden="true">
-  <img class="stage-art" src="{{ url_for('static', filename='trips/trip-%02d.svg' % stage_art) }}" alt="">
-  <i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i>
+  <img class="stage-photo" src="{{ url_for('static', filename='login-fruit.jpg') }}" alt="" onerror="this.remove()">
 </div>
 <div class="glasscard">
   <div class="gtop"><a class="gbrand" href="{{ url_for('home') }}">Unbox</a><a href="{{ url_for('home') }}">Instructions</a></div>

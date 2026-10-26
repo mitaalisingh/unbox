@@ -1435,7 +1435,7 @@ def test_visitors_see_the_instructions_first_and_then_the_login(client, fake):
     assert "unbox-no-intro" in page and 'href="/login"' in page                  # Skip / Log in lead to the login; a device can opt out of the cards
     login_page = client.get("/login").get_data(as_text=True)
     assert "Hello!" in login_page and "Good to see you" in login_page and 'placeholder="E-mail address"' in login_page
-    assert "stage-art" in login_page and "glasscard" in login_page
+    assert "stage-photo" in login_page and "glasscard" in login_page
     make_user(fake)
     r = login(client, "a@example.com")                                          # the first login of a new account: the cards once
     assert "/welcome" in r.headers["Location"]

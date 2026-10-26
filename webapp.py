@@ -159,8 +159,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
 
     @app.context_processor
     def inject():
-        return {"csrf_token": csrf_token, "logged_in": bool(session.get("at")), "user_email": session.get("email", ""),
-                "stage_art": secrets.randbelow(30) + 1}          # which illustration glows behind the login screens
+        return {"csrf_token": csrf_token, "logged_in": bool(session.get("at")), "user_email": session.get("email", "")}
 
     def callback_url():
         return request.url_root.rstrip("/") + url_for("auth_callback")

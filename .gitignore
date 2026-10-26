@@ -10,3 +10,6 @@ labels_*.html
 *.HEIC
 *.heic
 .pytest_cache/
+
+# Photo for the login screen: not published until its licence is confirmed
+static/login-fruit.jpg
