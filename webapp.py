@@ -18,7 +18,7 @@ from functools import wraps
 from pathlib import Path
 
 import segno
-from flask import Flask, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, jsonify, redirect, render_template, request, send_from_directory, session, url_for
 import naming
 import search as searchlib
 from images import BadImage, clean_photo
@@ -170,6 +170,8 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         if not has_profile(user):
             if meta.get("confirmed_18_plus") and meta.get("accepted_terms_at"):
                 create_profile_from_metadata(user, meta)
+                if not nxt:
+                    return redirect(url_for("welcome"))          # first time here: a short introduction
             else:
                 return redirect(url_for("consent"))
         return redirect(safe_next(nxt, url_for("trips")))
@@ -178,6 +180,23 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     @app.route("/")
     def home():
         return redirect(url_for("trips")) if session.get("at") else render_template("auth/landing.html")
+
+    @app.route("/manifest.webmanifest")
+    def manifest():
+        resp = send_from_directory(app.static_folder, "manifest.webmanifest", mimetype="application/manifest+json")
+        resp.headers["Cache-Control"] = "public, max-age=3600"
+        return resp
+
+    @app.route("/sw.js")
+    def service_worker():
+        resp = send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+    @app.route("/welcome")
+    @login_required
+    def welcome():
+        return render_template("auth/welcome.html")
 
     @app.route("/privacy")
     def privacy():

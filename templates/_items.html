@@ -19,14 +19,16 @@
       <div class="slide" data-id="{{ i.id }}">
         <a class="pic" href="{{ hrefs[i.id] }}">{% if urls.get(i.photo_path) %}<img src="{{ urls[i.photo_path] }}" alt="{{ i.name }}">{% else %}<span class="emoji">🔹</span>{% endif %}</a>
         <a class="sname" href="{{ hrefs[i.id] }}">{{ i.name }}</a>
-        <div class="details">
+        <div class="details" {{ 'hidden' if i.weight_kg is none and not i.tags and not i.description }}>
           <h3>Details</h3>
           <div class="dgrid">
             <div class="dchip dweight" {{ 'hidden' if i.weight_kg is none }}><span class="k">Weight</span><span class="v">{{ i.weight_kg if i.weight_kg is not none }}{{ ' kg' if i.weight_kg is not none }}</span></div>
             <div class="dchip dtags" {{ 'hidden' if not i.tags }}><span class="k">Tags</span><span class="v">{{ i.tags }}</span></div>
           </div>
           <p class="dnote" {{ 'hidden' if not i.description }}>{{ i.description }}</p>
-          {% if edit %}
+        </div>
+        {% if edit %}
+        <div class="tools">
           <button type="button" class="chip editq">✎ Weight &amp; note</button>
           <form class="quick" hidden>
             <label>Weight in kg <input name="weight_kg" inputmode="decimal" value="{{ i.weight_kg if i.weight_kg is not none }}" placeholder="1.5" autocomplete="off"></label>
@@ -34,8 +36,9 @@
             <p class="muted small qerr" hidden></p>
             <div class="row"><button type="button" class="chip qcancel">Cancel</button><button type="submit" class="chip solid">Save</button></div>
           </form>
-          {% endif %}
         </div>
+        {% endif %}
+      </div>
       </div>
     {% endfor %}
     </div>
@@ -80,9 +83,10 @@
         .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
         .then(function (res) {
           if (!res.ok) { err.textContent = res.j.error || 'Could not save.'; err.hidden = false; return; }
-          var w = slide.querySelector('.dweight'), n = slide.querySelector('.dnote');
+          var w = slide.querySelector('.dweight'), n = slide.querySelector('.dnote'), t = slide.querySelector('.dtags'), card = slide.querySelector('.details');
           w.hidden = res.j.weight_kg === null; w.querySelector('.v').textContent = res.j.weight_kg === null ? '' : res.j.weight_kg + ' kg';
           n.hidden = !res.j.description; n.textContent = res.j.description;
+          card.hidden = w.hidden && n.hidden && t.hidden;
           form.hidden = true; btn.hidden = false; err.hidden = true;
         }, function () { err.textContent = 'Could not save. Please try again.'; err.hidden = false; });
     });

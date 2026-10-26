@@ -1,0 +1,34 @@
+{% extends "auth/base.html" %}
+{% block title %}Welcome · Unbox{% endblock %}
+{% block topbar %}<header class="topbar"><span class="brand">Unbox</span><a class="back" href="{{ url_for('trips') }}">Skip</a></header>{% endblock %}
+{% block content %}
+<div class="intro">
+  <div class="track" id="intro-track">
+    <section class="islide"><div class="iicon">📷</div><h1>Photograph what you pack</h1>
+      <p>Take quick photos and upload up to 20 at a time. Unbox suggests a name for each one, so you only fix the few it gets wrong.</p></section>
+    <section class="islide"><div class="iicon">📦</div><h1>Sort it into storage</h1>
+      <p>Group items into boxes, bags or drawers. Made a mistake? Press and hold an item, and drop it onto the right storage.</p></section>
+    <section class="islide"><div class="iicon">🏷️</div><h1>Label it, share it</h1>
+      <p>Print a QR label for each box. Whoever scans it only needs the viewer password you share. No account, and they can't change anything.</p></section>
+    <section class="islide"><div class="iicon">🔒</div><h1>Lock it when you're done</h1>
+      <p>Lock your trip for a clean, view-only look. Unlock it any time to add or change things.</p></section>
+  </div>
+  <div class="dots" id="intro-dots"><span class="on"></span><span></span><span></span><span></span></div>
+  <p style="text-align:center;margin-top:18px"><button type="button" class="primary-link" id="intro-next" style="border:0;width:100%;cursor:pointer">Next</button></p>
+</div>
+<script>
+(function () {
+  var track = document.getElementById('intro-track'), dots = document.querySelectorAll('#intro-dots span'), next = document.getElementById('intro-next');
+  var n = dots.length, startUrl = {{ url_for('trips')|tojson }};
+  function at() { return Math.max(0, Math.min(n - 1, Math.round(track.scrollLeft / track.clientWidth))); }
+  function mark() { var i = at(); dots.forEach(function (d, k) { d.classList.toggle('on', k === i); }); next.textContent = i === n - 1 ? 'Get started' : 'Next'; }
+  track.addEventListener('scroll', function () { window.requestAnimationFrame(mark); });
+  next.addEventListener('click', function () {
+    var i = at(); if (i >= n - 1) { location.href = startUrl; return; }
+    var target = (i + 1) * track.clientWidth;
+    track.scrollTo({ left: target, behavior: 'smooth' });
+    setTimeout(function () { if (at() === i) { track.scrollLeft = target; mark(); } }, 700);   // if the animation didn't run, just move
+  });
+})();
+</script>
+{% endblock %}

@@ -109,8 +109,11 @@ def test_unconfirmed_email_is_told_to_confirm(client, fake):
 def test_login_creates_consent_profile_from_signup_data(client, fake):
     make_user(fake)
     r = login(client, "a@example.com")
-    assert r.status_code == 302 and r.headers["Location"].endswith("/trips")
+    assert r.status_code == 302 and r.headers["Location"].endswith("/welcome")        # first time: the short introduction
     assert len(fake.tables["profiles"]) == 1 and fake.tables["profiles"][0]["confirmed_18_plus"] is True
+    client.post("/logout", data={"csrf": csrf(client, "/welcome")})
+    r = login(client, "a@example.com")
+    assert r.headers["Location"].endswith("/trips")                                    # after that, straight to the trips
 
 
 def test_user_without_consent_data_must_confirm_first(client, fake):
@@ -243,7 +246,7 @@ def test_confirmation_link_logs_in(client, fake):
     make_user(fake)
     tokens = fake._issue(fake.users["a@example.com"]["id"], "a@example.com")
     r = post(client, "/auth/session", {"access_token": tokens["access_token"], "refresh_token": tokens["refresh_token"], "type": "signup"})
-    assert r.headers["Location"].endswith("/trips") and len(fake.tables["profiles"]) == 1
+    assert r.headers["Location"].endswith("/welcome") and len(fake.tables["profiles"]) == 1
 
 
 def test_expired_or_fake_links_are_handled_kindly(client, fake):
@@ -1202,3 +1205,42 @@ def test_quick_edit_is_owner_only_and_blocked_when_locked(fake, app):
     assert post(owner, f"/trips/{tid}/n/{mug['id']}/quick", {"weight_kg": "9"}).status_code == 409
     assert mug.get("weight_kg") is None
     assert "Weight &amp; note" not in owner.get(f"/trips/{tid}").get_data(as_text=True)
+
+
+
+# ================= install as an app, the introduction, and the Details card =================
+def test_app_install_files_are_served(client):
+    import json
+    m = client.get("/manifest.webmanifest")
+    data = json.loads(m.get_data(as_text=True))
+    assert m.mimetype == "application/manifest+json" and data["display"] == "standalone" and data["start_url"] == "/trips"
+    sizes = {i["sizes"] for i in data["icons"]}
+    assert {"192x192", "512x512"} <= sizes
+    for icon in data["icons"]:
+        assert client.get(icon["src"]).status_code == 200
+    sw = client.get("/sw.js")
+    assert sw.status_code == 200 and "javascript" in sw.mimetype and "caches" not in sw.get_data(as_text=True)    # stores nothing
+    assert b'rel="manifest"' in client.get("/login").data and b"apple-touch-icon" in client.get("/login").data
+
+
+def test_the_introduction_needs_login_and_is_always_reachable_from_the_profile(client, fake):
+    assert client.get("/welcome").status_code == 302
+    make_user(fake)
+    login(client, "a@example.com")
+    page = client.get("/welcome").get_data(as_text=True)
+    assert "Photograph what you pack" in page and "Lock it when you" in page and "Get started" in page
+    assert "/welcome" in client.get("/account").get_data(as_text=True)
+
+
+def test_details_card_is_hidden_until_something_is_entered(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    add(owner, tid, {"name": "Plain mug"})
+    add(owner, tid, {"name": "Heavy pan", "weight_kg": "2.5"})
+    page = owner.get(f"/trips/{tid}").get_data(as_text=True)
+    cards = page.split('class="slide"')[1:]
+    plain = next(c for c in cards if "Plain mug" in c)
+    heavy = next(c for c in cards if "Heavy pan" in c)
+    assert 'class="details" hidden' in plain and 'class="details" >' not in plain
+    assert 'class="details" hidden' not in heavy and "2.5 kg" in heavy
+    assert "Weight &amp; note" in plain                       # the owner can still add them

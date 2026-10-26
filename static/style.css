@@ -172,7 +172,7 @@ button.primary.compact{display:block;width:auto;padding:10px 26px;font-size:15px
 .newtrip[open] > summary{margin-bottom:6px}
 
 /* add items: big button, drag-to-move */
-a.primary-link,label.primary-link{display:flex;align-items:center;justify-content:center;padding:15px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:500;font-size:16px}
+a.primary-link,label.primary-link,button.primary-link{display:flex;align-items:center;justify-content:center;padding:15px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:500;font-size:16px;font-family:var(--font)}
 .itemview .tile{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .tile.lifted{opacity:.35}
 .tile.ghost{position:fixed!important;z-index:60;pointer-events:none;opacity:.92;transform:scale(1.06) rotate(-2deg);box-shadow:0 18px 40px rgba(0,0,0,.8);margin:0}
@@ -199,8 +199,19 @@ a.menuitem{text-decoration:none}
 .dchip .k{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
 .dchip .v{font-size:15px;color:var(--ink);overflow-wrap:anywhere}
 .dnote{margin:12px 0 0;color:var(--body);font-size:15px;overflow-wrap:anywhere}
-.details .editq{margin-top:12px}
+.tools{margin-top:10px;text-align:center}
 form.quick{margin-top:12px}
 form.quick label{display:block;margin-bottom:10px;font-size:13px;color:var(--muted)}
 form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 [hidden]{display:none!important}
+
+/* intro */
+.intro{margin-top:12px}
+.intro .track{gap:0}
+.islide{flex:0 0 100%;scroll-snap-align:center;text-align:center;padding:34px 10px 10px;min-height:340px}
+.iicon{font-size:72px;line-height:1;margin-bottom:18px}
+.islide h1{font-size:26px;margin:0 0 12px}
+.islide p{color:var(--body);font-size:16px;margin:0 auto;max-width:340px}
+.dots{display:flex;gap:8px;justify-content:center;margin-top:12px}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--edge)}
+.dots span.on{background:var(--paper)}

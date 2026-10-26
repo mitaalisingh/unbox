@@ -56,7 +56,7 @@ What exists and has been tested against a real Supabase project:
 - **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
 - **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
 
-Automated tests (130, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
+Automated tests (133, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
 
 ```bash
 pip install -r requirements-dev.txt
@@ -86,7 +86,8 @@ The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
 - [ ] "Scan a pile": one photo, objects found and cropped automatically, unknown ones named "Unidentified item"
 - [x] A viewer password per trip, so the QR itself carries no secret
 - [x] QR labels generated in-app
-- [ ] Installable PWA (add to home screen)
+- [x] Installable on a phone's home screen (web app manifest, icons, a do-nothing service worker that stores no private data)
+- [x] A short introduction for first-time users (also under Profile → How Unbox works)
 - [x] Location data stripped from every uploaded photo
 - [x] Search inside a trip (by meaning, words and typos)
 - [x] Editing boxes and items (rename, tags, weight, replace or remove the photo, move between boxes) and renaming trips
