@@ -811,16 +811,27 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         blocked = lock_guard(tid, token)
         if blocked:
             return blocked
-        changed = 0
+        changed, bad_weight = 0, 0
         for raw in request.form.getlist("id")[:MAX_BATCH]:
             nid = trip_id_or_404(raw)
             name = " ".join(request.form.get(f"name_{nid}", "").split())
             old = request.form.get(f"old_{nid}", "")
-            if not 1 <= len(name) <= 80 or name == old:
-                continue
-            client.update("nodes", token, {"id": f"eq.{nid}", "trip_id": f"eq.{tid}"},
-                          {"name": name, "embedding": embedding_field(name, "", "").get("embedding")})
-            changed += 1
+            changes = {}
+            if 1 <= len(name) <= 80 and name != old:
+                changes["name"] = name
+                changes["embedding"] = embedding_field(name, "", "").get("embedding")
+            raw_weight = request.form.get(f"weight_{nid}", "").strip()
+            if raw_weight:
+                kg, problem = parse_weight(raw_weight)
+                if problem:
+                    bad_weight += 1
+                else:
+                    changes["weight_kg"] = kg
+            if changes:
+                client.update("nodes", token, {"id": f"eq.{nid}", "trip_id": f"eq.{tid}"}, changes)
+                changed += 1
+        if bad_weight:
+            flash("Some weights weren't numbers (like 1.5) and were left out.")
         flash(f"Saved {changed} change{'s' if changed != 1 else ''}." if changed else "All names kept.")
         back = request.form.get("back", "")
         return redirect(safe_next(back, url_for("trip_view", tid=tid)))
@@ -1030,6 +1041,30 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         box = target_box(tid, token)
         done = url_for("node_view", tid=tid, nid=box["id"]) if box else url_for("trip_view", tid=tid)
         return render_template("auth/add_items.html", trip=trip, box=box, done=done)
+
+    @app.route("/trips/<tid>/n/<nid>/quick", methods=["POST"])
+    @login_required
+    def quick_edit(tid, nid):
+        """Add or change just the weight and the note of one item (used from the swipe view)."""
+        token, tid, nid = request.user["token"], trip_id_or_404(tid), trip_id_or_404(nid)
+        if not get_trip(tid, token):
+            abort(404)
+        blocked = lock_guard(tid, token, as_json=True)
+        if blocked:
+            return blocked
+        node = next((n for n in load_nodes(tid, token) if n["id"] == nid and not n["is_box"]), None)
+        if not node:
+            abort(404)
+        kg, problem = parse_weight(request.form.get("weight_kg"))
+        note = " ".join(request.form.get("description", "").split())
+        if not problem and len(note) > 300:
+            problem = "The note can be up to 300 characters."
+        if problem:
+            return jsonify(error=problem), 400
+        client.update("nodes", token, {"id": f"eq.{nid}", "trip_id": f"eq.{tid}"},
+                      {"weight_kg": kg, "description": note,
+                       "embedding": embedding_field(node["name"], node.get("tags", ""), note).get("embedding")})
+        return jsonify(ok=True, weight_kg=kg, description=note)
 
     @app.route("/trips/<tid>/n/<nid>/move", methods=["POST"])
     @login_required

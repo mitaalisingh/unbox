@@ -1147,3 +1147,58 @@ def test_all_items_view_lists_everything_wherever_it_is_kept(fake, app):
     assert "Secret lamp" in everything and "Loose spoon" in everything
     assert "data-drop-box" not in everything                                           # no storage cards in this view
     assert "data-drop-box" in by_storage
+
+
+# ================= weight and note: on the review screen, and quick edit from the swipe view =================
+def test_review_saves_weights_and_ignores_bad_ones(fake, app):
+    app, _ = capture_app(fake)
+    client = app.test_client()
+    tid = logged_in_trip(client, fake)
+    capture(client, tid, [photo_with_gps(), photo_with_gps(), photo_with_gps()])
+    a, b, c = fake.tables["nodes"]
+    form = {"csrf": csrf(client), "id": [a["id"], b["id"], c["id"]], "back": f"/trips/{tid}"}
+    for n, w in ((a, "1,5"), (b, "heavy"), (c, "")):
+        form[f"old_{n['id']}"] = n["name"]; form[f"name_{n['id']}"] = n["name"]; form[f"weight_{n['id']}"] = w
+    r = client.post(f"/trips/{tid}/review", data=form)
+    assert r.status_code == 302
+    assert a["weight_kg"] == 1.5 and b.get("weight_kg") is None and c.get("weight_kg") is None
+    assert "weren&#39;t numbers" in client.get(f"/trips/{tid}").get_data(as_text=True)
+
+
+def test_swipe_view_shows_the_details_a_user_entered(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    add(owner, tid, {"name": "Tape dispenser", "weight_kg": "0.35", "tags": "office", "description": "Black, Kangaro"})
+    page = owner.get(f"/trips/{tid}").get_data(as_text=True)
+    assert "Details" in page and "0.35 kg" in page and "office" in page and "Black, Kangaro" in page
+    assert "Weight &amp; note" in page                                   # the owner can edit it right there
+
+
+def test_quick_edit_changes_only_weight_and_note(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    add(owner, tid, {"name": "Mug", "tags": "cup"})
+    mug = fake.tables["nodes"][0]
+    r = post(owner, f"/trips/{tid}/n/{mug['id']}/quick", {"weight_kg": "0,4", "description": "  chipped   handle "})
+    assert r.status_code == 200 and r.get_json() == {"ok": True, "weight_kg": 0.4, "description": "chipped handle"}
+    assert mug["name"] == "Mug" and mug["tags"] == "cup" and mug["weight_kg"] == 0.4 and mug["description"] == "chipped handle"
+    r = post(owner, f"/trips/{tid}/n/{mug['id']}/quick", {"weight_kg": "", "description": ""})              # clearing both is allowed
+    assert r.get_json()["weight_kg"] is None and mug["weight_kg"] is None
+    assert post(owner, f"/trips/{tid}/n/{mug['id']}/quick", {"weight_kg": "abc"}).status_code == 400
+    assert post(owner, f"/trips/{tid}/n/{mug['id']}/quick", {"description": "x" * 301}).status_code == 400
+    assert mug["weight_kg"] is None
+
+
+def test_quick_edit_is_owner_only_and_blocked_when_locked(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    add(owner, tid, {"name": "Mug"}); add(owner, tid, {"name": "Big", "kind": "box"})
+    mug, big = fake.tables["nodes"]
+    stranger = app.test_client()
+    logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
+    assert post(stranger, f"/trips/{tid}/n/{mug['id']}/quick", {"weight_kg": "9"}).status_code == 404
+    assert post(owner, f"/trips/{tid}/n/{big['id']}/quick", {"weight_kg": "9"}).status_code == 404          # boxes aren't edited this way
+    lock(owner, tid)
+    assert post(owner, f"/trips/{tid}/n/{mug['id']}/quick", {"weight_kg": "9"}).status_code == 409
+    assert mug.get("weight_kg") is None
+    assert "Weight &amp; note" not in owner.get(f"/trips/{tid}").get_data(as_text=True)

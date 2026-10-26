@@ -19,6 +19,7 @@
       {% if urls.get(m.path) %}<img src="{{ urls[m.path] }}" alt="" style="width:88px;height:88px;object-fit:cover;border-radius:12px;flex:none">{% endif %}
       <div style="flex:1;min-width:0">
         <input id="n_{{ m.id }}" name="name_{{ m.id }}" value="{{ m.name }}" maxlength="80" autocomplete="off" aria-label="Item name">
+        <input name="weight_{{ m.id }}" inputmode="decimal" placeholder="Weight in kg (optional)" autocomplete="off" aria-label="Weight in kg" style="margin-top:8px">
         {% if m.check %}<p class="muted small" style="margin:4px 0">Not sure about this one. Please check it.</p>{% endif %}
         <div class="chips" style="margin-top:6px">
           {% for g in m.guesses %}

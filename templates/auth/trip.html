@@ -90,7 +90,8 @@
   {% if items %}
   {% if boxes %}<h2>Loose items</h2>{% endif %}
   {% set hrefs = {} %}{% for i in items %}{% set _ = hrefs.update({i.id: url_for('node_view', tid=trip.id, nid=i.id)}) %}{% endfor %}
-  {{ item_views(items, urls, hrefs) }}
+  {% set edit = {'url': url_for('quick_edit', tid=trip.id, nid='NID'), 'csrf': csrf_token()} if not locked else none %}
+  {{ item_views(items, urls, hrefs, edit) }}
   {% elif not boxes %}<p class="muted">{{ 'Nothing here.' if locked else 'Nothing here yet. Tap “Add your items” to start.' }}</p>{% endif %}
 
   {% if not locked %}<p style="margin:22px 0 4px"><a class="primary-link" href="{{ url_for('add_choose', tid=trip.id, box=node.id if node else None) }}">＋ {{ 'Add items' if node else 'Add your items' }}</a></p>{% endif %}

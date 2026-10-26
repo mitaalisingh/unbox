@@ -1,5 +1,5 @@
 {# Items of a box, two ways: a photo grid, or one big photo at a time that you swipe through. The choice is remembered on this device. #}
-{% macro item_views(items, urls, hrefs) %}
+{% macro item_views(items, urls, hrefs, edit=none) %}
 <div class="itemview" data-view="grid">
   <div class="viewtoggle" role="group" aria-label="How to show the items">
     <button type="button" data-set="grid" aria-pressed="true">Grid</button>
@@ -16,10 +16,27 @@
   <div class="swipe">
     <div class="track" tabindex="0" aria-label="Swipe through the items">
     {% for i in items %}
-      <a class="slide" href="{{ hrefs[i.id] }}">
-        <span class="pic">{% if urls.get(i.photo_path) %}<img src="{{ urls[i.photo_path] }}" alt="{{ i.name }}">{% else %}<span class="emoji">🔹</span>{% endif %}</span>
-        <strong>{{ i.name }}</strong>{% if i.weight_kg is not none %}<small>{{ i.weight_kg }} kg</small>{% endif %}
-      </a>
+      <div class="slide" data-id="{{ i.id }}">
+        <a class="pic" href="{{ hrefs[i.id] }}">{% if urls.get(i.photo_path) %}<img src="{{ urls[i.photo_path] }}" alt="{{ i.name }}">{% else %}<span class="emoji">🔹</span>{% endif %}</a>
+        <a class="sname" href="{{ hrefs[i.id] }}">{{ i.name }}</a>
+        <div class="details">
+          <h3>Details</h3>
+          <div class="dgrid">
+            <div class="dchip dweight" {{ 'hidden' if i.weight_kg is none }}><span class="k">Weight</span><span class="v">{{ i.weight_kg if i.weight_kg is not none }}{{ ' kg' if i.weight_kg is not none }}</span></div>
+            <div class="dchip dtags" {{ 'hidden' if not i.tags }}><span class="k">Tags</span><span class="v">{{ i.tags }}</span></div>
+          </div>
+          <p class="dnote" {{ 'hidden' if not i.description }}>{{ i.description }}</p>
+          {% if edit %}
+          <button type="button" class="chip editq">✎ Weight &amp; note</button>
+          <form class="quick" hidden>
+            <label>Weight in kg <input name="weight_kg" inputmode="decimal" value="{{ i.weight_kg if i.weight_kg is not none }}" placeholder="1.5" autocomplete="off"></label>
+            <label>Note <input name="description" maxlength="300" value="{{ i.description }}" placeholder="Anything worth remembering" autocomplete="off"></label>
+            <p class="muted small qerr" hidden></p>
+            <div class="row"><button type="button" class="chip qcancel">Cancel</button><button type="submit" class="chip solid">Save</button></div>
+          </form>
+          {% endif %}
+        </div>
+      </div>
     {% endfor %}
     </div>
     <p class="count"><span class="cur">1</span> / {{ items|length }}</p>
@@ -50,6 +67,27 @@
   track.addEventListener('scroll', function () { window.requestAnimationFrame(mark); });
   thumbs.forEach(function (t) { t.addEventListener('click', function () { track.scrollTo({ left: Number(t.getAttribute('data-i')) * (track.clientWidth + 14), behavior: 'smooth' }); }); });
   mark();
+  {% if edit %}
+  var editUrl = {{ edit.url|tojson }}, csrf = {{ edit.csrf|tojson }};
+  slides.forEach(function (slide) {
+    var form = slide.querySelector('form.quick'), btn = slide.querySelector('.editq'), err = slide.querySelector('.qerr');
+    btn.addEventListener('click', function () { form.hidden = false; btn.hidden = true; });
+    slide.querySelector('.qcancel').addEventListener('click', function () { form.hidden = true; btn.hidden = false; err.hidden = true; });
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var d = new FormData(form); d.append('csrf', csrf);
+      fetch(editUrl.replace('NID', slide.getAttribute('data-id')), { method: 'POST', body: d, credentials: 'same-origin' })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok) { err.textContent = res.j.error || 'Could not save.'; err.hidden = false; return; }
+          var w = slide.querySelector('.dweight'), n = slide.querySelector('.dnote');
+          w.hidden = res.j.weight_kg === null; w.querySelector('.v').textContent = res.j.weight_kg === null ? '' : res.j.weight_kg + ' kg';
+          n.hidden = !res.j.description; n.textContent = res.j.description;
+          form.hidden = true; btn.hidden = false; err.hidden = true;
+        }, function () { err.textContent = 'Could not save. Please try again.'; err.hidden = false; });
+    });
+  });
+  {% endif %}
 })();
 </script>
 {% endmacro %}

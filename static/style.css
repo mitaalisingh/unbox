@@ -148,12 +148,10 @@ code{background:var(--glass-2);padding:2px 6px;border-radius:6px}
 .swipe{max-width:440px;margin:0 auto}
 .track{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;outline:none}
 .track::-webkit-scrollbar{display:none}
-.slide{flex:0 0 100%;scroll-snap-align:center;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--ink);text-align:center}
+.slide{flex:0 0 100%;min-width:0;scroll-snap-align:center;display:flex;flex-direction:column;align-items:stretch;gap:4px;color:var(--ink)}
 .slide .pic{display:grid;place-items:center;width:100%;aspect-ratio:4/5;border-radius:24px;overflow:hidden;background:#0c0c0c;border:1px solid var(--edge)}
 .slide .pic img{width:100%;height:100%;object-fit:contain}
 .slide .emoji{font-size:64px}
-.slide strong{font-weight:500;font-size:20px;margin-top:8px}
-.slide small{color:var(--muted);font-size:14px}
 .count{text-align:center;color:var(--muted);font-size:13px;margin:10px 0 6px}
 .strip{display:flex;gap:8px;overflow-x:auto;padding:4px 2px;scrollbar-width:none}
 .strip::-webkit-scrollbar{display:none}
@@ -191,3 +189,18 @@ a.menuitem{text-decoration:none}
 
 .viewtoggle a{display:inline-block;color:var(--muted);font:500 13px var(--font);padding:7px 16px;border-radius:999px}
 .viewtoggle a[aria-current]{background:var(--paper);color:var(--accent-ink)}
+
+.slide .pic{text-decoration:none}
+.slide .sname{text-align:center;font-weight:500;font-size:22px;margin:10px 0 6px;color:var(--ink)}
+.details{background:var(--panel);border:1px solid var(--edge);border-radius:20px;padding:14px 16px 16px}
+.details h3{margin:0 0 10px;font-size:13px;font-weight:500;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.dgrid{display:flex;gap:8px;flex-wrap:wrap}
+.dchip{background:var(--glass-2);border:1px solid var(--edge);border-radius:14px;padding:8px 12px;display:flex;flex-direction:column;min-width:0}
+.dchip .k{font-size:11px;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.dchip .v{font-size:15px;color:var(--ink);overflow-wrap:anywhere}
+.dnote{margin:12px 0 0;color:var(--body);font-size:15px;overflow-wrap:anywhere}
+.details .editq{margin-top:12px}
+form.quick{margin-top:12px}
+form.quick label{display:block;margin-bottom:10px;font-size:13px;color:var(--muted)}
+form.quick .row{display:flex;gap:8px;justify-content:flex-end}
+[hidden]{display:none!important}
