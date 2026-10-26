@@ -2,11 +2,6 @@
 {% block title %}Your trips · Unbox{% endblock %}
 {% block content %}
 <h1>Your trips</h1>
-<form method="post" class="glass addbox" style="margin-top:14px">
-  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-  <label>New trip <input name="name" maxlength="80" required placeholder="e.g. Hostel to home" autocomplete="off"></label>
-  <button class="primary compact" type="submit">Create trip</button>
-</form>
 {% if active %}
 <ul class="stack">
 {% for t in active %}
@@ -29,7 +24,15 @@
   </li>
 {% endfor %}
 </ul>
-{% else %}<p class="muted">No trips yet. Create your first one above.</p>{% endif %}
+{% else %}<p class="muted">No trips yet. Create your first one below.</p>{% endif %}
+<details class="glass addbox newtrip" {{ 'open' if not active and not archived }}>
+  <summary>New trip <span aria-hidden="true">＋</span></summary>
+  <form method="post">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label>Trip name <input name="name" maxlength="80" required placeholder="e.g. Hostel to home" autocomplete="off"></label>
+    <button class="primary compact" type="submit">Create trip</button>
+  </form>
+</details>
 {% if archived %}
 <h2>Archived</h2>
 <ul class="stack">
