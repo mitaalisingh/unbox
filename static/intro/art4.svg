@@ -1,3 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
-<path d="M140 190 V138 a60 60 0 0 1 120 0 V190" stroke="#FEFAF0" stroke-width="26" stroke-linecap="round"/><rect x="100" y="180" width="200" height="150" rx="26" fill="#FEFAF0"/><rect x="100" y="250" width="200" height="80" rx="26" fill="#B79858"/><rect x="100" y="250" width="200" height="30" fill="#B79858"/><circle cx="200" cy="248" r="20" fill="#0b0b0b"/><rect x="192" y="252" width="16" height="42" rx="6" fill="#0b0b0b"/><circle cx="305" cy="110" r="9" fill="#F1C166"/>
+<style>
+.bx{transform-box:fill-box;transform-origin:center}
+.bob{animation:bob 3.2s ease-in-out infinite alternate}.bob2{animation:bob 4.1s ease-in-out -1s infinite alternate}.bob3{animation:bob 3.6s ease-in-out -2s infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-9px)}}
+.pulse{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(.93)}}
+.tw{animation:tw 2s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.35}50%{opacity:1}}
+.dropin{animation:dropin 3.6s ease-in infinite}.dropin.d2{animation-delay:-1.2s}.dropin.d3{animation-delay:-2.4s}
+@keyframes dropin{0%{transform:translateY(-14px);opacity:0}15%{opacity:1}70%{transform:translateY(64px);opacity:1}85%,100%{transform:translateY(74px);opacity:0}}
+.flow{animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-22}}
+.scan{animation:scan 2.6s ease-in-out infinite alternate}
+@keyframes scan{from{transform:translateY(0)}to{transform:translateY(78px)}}
+.shackle{animation:shackle 3.6s ease-in-out infinite}
+@keyframes shackle{0%,30%{transform:translateY(-16px)}45%,85%{transform:translateY(0)}100%{transform:translateY(-16px)}}
+.shake{animation:shake 3.6s ease-in-out infinite}
+@keyframes shake{0%,44%,56%,100%{transform:rotate(0)}48%{transform:rotate(-2.5deg)}52%{transform:rotate(2.5deg)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+<g class="bx shackle"><path d="M140 190 V138 a60 60 0 0 1 120 0 V190" stroke="#FEFAF0" stroke-width="26" stroke-linecap="round"/></g><g class="bx shake"><rect x="100" y="180" width="200" height="150" rx="26" fill="#FEFAF0"/><rect x="100" y="250" width="200" height="80" rx="26" fill="#B79858"/><rect x="100" y="250" width="200" height="30" fill="#B79858"/><circle cx="200" cy="248" r="20" fill="#0b0b0b"/><rect x="192" y="252" width="16" height="42" rx="6" fill="#0b0b0b"/></g><g class="bx tw"><circle cx="305" cy="110" r="9" fill="#F1C166"/></g>
 </svg>

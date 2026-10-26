@@ -225,6 +225,12 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         """The instructions again (Profile -> Instructions), and the one-time look for a brand-new account."""
         return render_template("auth/welcome.html", go=safe_next(request.args.get("next"), url_for("trips")))
 
+    @app.route("/about")
+    def about():
+        """About the creator: public, so it can be read before logging in."""
+        photo = os.path.exists(os.path.join(app.static_folder, "about", "me.jpg"))
+        return render_template("auth/about.html", photo=photo, back=url_for("home"))
+
     @app.route("/privacy")
     def privacy():
         return render_template("auth/privacy.html")

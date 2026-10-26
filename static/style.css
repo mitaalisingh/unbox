@@ -314,3 +314,18 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 @keyframes drop2{0%,29.9%{opacity:0;transform:translateY(-440px)}30%{opacity:1;transform:translateY(-440px);animation-timing-function:cubic-bezier(.5,0,.9,.6)}37%{transform:translateY(0)}38.5%{transform:translateY(-8px)}40%,100%{opacity:1;transform:translateY(0)}}
 @keyframes drop3{0%,41.9%{opacity:0;transform:translateY(-440px)}42%{opacity:1;transform:translateY(-440px);animation-timing-function:cubic-bezier(.5,0,.9,.6)}49%{transform:translateY(0)}50.5%{transform:translateY(-8px)}52%,100%{opacity:1;transform:translateY(0)}}
 @media (prefers-reduced-motion: reduce){.rig,.wheel,.drop{animation:none!important}.rig{transform:translateX(120px)}.drop{opacity:1}}
+
+/* about the creator */
+.about{padding-bottom:30px}
+.aboutpic{display:grid;place-items:center;margin:10px 0 8px}
+.aboutpic .sketch{width:min(300px,78%);height:auto}
+.aboutpic .photo{width:min(260px,70%);aspect-ratio:3/4;object-fit:cover;border-radius:34px}
+.about .eyebrow{font:italic 400 38px/1.05 Georgia,"Times New Roman",serif;color:#fff;margin:6px 0 0}
+.about .cap{font:400 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:#cfcdc2;margin:6px 0 14px}
+.about .serif{font-family:Georgia,"Times New Roman",serif;font-weight:400;color:#fff}
+.about h1.serif{font-size:36px;margin:8px 0 6px}
+.about h2.serif{font-size:27px;margin:26px 0 6px;text-transform:none;letter-spacing:0}
+.about p,.about li{color:var(--body);font-size:16px;line-height:1.6}
+.about .proud{padding-left:18px;margin:6px 0}
+.about .proud li{margin-bottom:8px}
+.about .chips{margin:6px 0}

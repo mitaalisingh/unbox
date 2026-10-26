@@ -2,7 +2,7 @@
  "name": "Unbox",
  "short_name": "Unbox",
  "description": "Scan a box, see what's inside.",
- "start_url": "/trips",
+ "start_url": "/",
  "scope": "/",
  "display": "standalone",
  "orientation": "portrait",

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 330" fill="none">
+<style>
+.l{fill:none;stroke:#FEFAF0;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.h{stroke:#F1C166}.t{stroke:#88B8CE}
+.d{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.8s ease-out forwards}
+.d2{animation-delay:.5s}.d3{animation-delay:1s}.d4{animation-delay:1.5s}
+@keyframes draw{to{stroke-dashoffset:0}}
+.bob{animation:bob 3.4s ease-in-out 2.4s infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-8px)}}
+.tw{transform-box:fill-box;transform-origin:center;animation:tw 2.2s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}.d{stroke-dashoffset:0}}
+</style>
+<!-- head -->
+<path class="l d" pathLength="1" d="M120 132 C116 82 160 58 196 78 C228 96 226 142 214 172 C204 198 176 214 150 206 C128 198 122 160 120 132Z"/>
+<!-- hair -->
+<path class="l d d2" pathLength="1" d="M130 104 C150 80 188 78 208 96"/>
+<path class="l d d2" pathLength="1" d="M124 124 C140 98 172 92 198 108"/>
+<path class="l d d2" pathLength="1" d="M214 72 a16 16 0 1 0 -2 -14"/>
+<!-- face -->
+<path class="l d d3" pathLength="1" d="M150 144 q10 8 20 0"/>
+<path class="l d d3" pathLength="1" d="M186 142 q10 8 20 0"/>
+<path class="l d d3" pathLength="1" d="M177 148 q-6 14 2 20"/>
+<path class="l h d3" pathLength="1" d="M162 182 q14 10 30 -2"/>
+<!-- neck, shoulders -->
+<path class="l d d3" pathLength="1" d="M160 206 L158 248"/>
+<path class="l d d3" pathLength="1" d="M198 196 L206 248"/>
+<path class="l d d4" pathLength="1" d="M158 248 C122 258 86 282 72 326"/>
+<path class="l d d4" pathLength="1" d="M206 248 C248 256 272 282 278 326"/>
+<!-- the hand under the chin -->
+<path class="l d d4" pathLength="1" d="M100 268 C108 238 134 214 152 214 C164 214 168 228 156 236 C144 244 130 256 122 274"/>
+<path class="l d d4" pathLength="1" d="M140 224 q6 -6 12 -2 M134 232 q6 -6 12 -2"/>
+<!-- a parcel floating by, with a spark -->
+<g class="bob">
+  <path class="l h d4" pathLength="1" d="M236 40 l22 12 v26 l-22 12 l-22 -12 v-26z M236 40 v26 M214 52 l22 14 l22 -14"/>
+</g>
+<path class="l t tw" d="M270 24 v16 M262 32 h16"/>
+<path class="l tw" style="animation-delay:.8s" d="M92 70 v12 M86 76 h12"/>
+</svg>

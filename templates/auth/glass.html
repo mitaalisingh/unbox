@@ -1,6 +1,12 @@
 {% extends "auth/base.html" %}
 {% block topbar %}{% endblock %}
 {% block content %}
+<script>
+// Someone who opens the login link directly on a new phone sees the instructions once first.
+try {
+  if (!localStorage.getItem('unbox-intro-seen') && !localStorage.getItem('unbox-no-intro') && !location.search) { location.replace({{ url_for('home')|tojson }}); }
+} catch (e) {}
+</script>
 <div class="stage stage-doodles" aria-hidden="true">
   <svg viewBox="0 0 375 812" preserveAspectRatio="xMidYMid slice" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
     <path d="M0 748 H375" stroke-dasharray="14 12" opacity=".4"/>
@@ -22,7 +28,7 @@
   </svg>
 </div>
 <div class="glasscard">
-  <div class="gtop"><a class="gbrand" href="{{ url_for('home') }}">Unbox</a><a href="{{ url_for('home') }}">Instructions</a></div>
+  <div class="gtop"><a class="gbrand" href="{{ url_for('home') }}">Unbox</a><span><a href="{{ url_for('home') }}">Instructions</a> · <a href="{{ url_for('about') }}">About</a></span></div>
   {% block glass %}{% endblock %}
 </div>
 {% endblock %}

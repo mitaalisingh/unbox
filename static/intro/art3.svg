@@ -1,5 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
-<polygon points="104.7,150.0 200.0,205.0 200.0,315.0 104.7,260.0" fill="#B79858"/>
+<style>
+.bx{transform-box:fill-box;transform-origin:center}
+.bob{animation:bob 3.2s ease-in-out infinite alternate}.bob2{animation:bob 4.1s ease-in-out -1s infinite alternate}.bob3{animation:bob 3.6s ease-in-out -2s infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-9px)}}
+.pulse{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(.93)}}
+.tw{animation:tw 2s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.35}50%{opacity:1}}
+.dropin{animation:dropin 3.6s ease-in infinite}.dropin.d2{animation-delay:-1.2s}.dropin.d3{animation-delay:-2.4s}
+@keyframes dropin{0%{transform:translateY(-14px);opacity:0}15%{opacity:1}70%{transform:translateY(64px);opacity:1}85%,100%{transform:translateY(74px);opacity:0}}
+.flow{animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-22}}
+.scan{animation:scan 2.6s ease-in-out infinite alternate}
+@keyframes scan{from{transform:translateY(0)}to{transform:translateY(78px)}}
+.shackle{animation:shackle 3.6s ease-in-out infinite}
+@keyframes shackle{0%,30%{transform:translateY(-16px)}45%,85%{transform:translateY(0)}100%{transform:translateY(-16px)}}
+.shake{animation:shake 3.6s ease-in-out infinite}
+@keyframes shake{0%,44%,56%,100%{transform:rotate(0)}48%{transform:rotate(-2.5deg)}52%{transform:rotate(2.5deg)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+<g class="bx bob"><polygon points="104.7,150.0 200.0,205.0 200.0,315.0 104.7,260.0" fill="#B79858"/>
 <polygon points="200.0,205.0 295.3,150.0 295.3,260.0 200.0,315.0" fill="#A13A1E"/>
 <polygon points="200.0,95.0 295.3,150.0 200.0,205.0 104.7,150.0" fill="#FEFAF0"/>
 <polygon points="163.8,115.9 140.9,129.1 236.2,184.1 259.1,170.9" fill="#F1C166"/>
@@ -43,5 +63,5 @@
 <polygon points="171.4,221.5 178.3,225.5 178.3,233.4 171.4,229.4" fill="#0b0b0b"/>
 <polygon points="171.4,230.3 178.3,234.3 178.3,242.2 171.4,238.2" fill="#0b0b0b"/>
 <polygon points="171.4,247.9 178.3,251.9 178.3,259.8 171.4,255.8" fill="#0b0b0b"/>
-<polygon points="171.4,265.5 178.3,269.5 178.3,277.4 171.4,273.4" fill="#0b0b0b"/><path d="M64 330 H336" stroke="#88B8CE" stroke-width="3" stroke-linecap="round"/>
+<polygon points="171.4,265.5 178.3,269.5 178.3,277.4 171.4,273.4" fill="#0b0b0b"/></g><path d="M119.9 175.3 L184.8 212.6" stroke="#88B8CE" stroke-width="5" stroke-linecap="round" class="bx scan"/><path d="M64 330 H336" stroke="#88B8CE" stroke-width="3" stroke-linecap="round" stroke-dasharray="12 10" class="flow"/>
 </svg>

@@ -36,6 +36,7 @@
   <p style="text-align:center;margin-top:10px"><button class="chip" type="button" id="intro-hide"></button></p>
 </div>
 <script>
+try { localStorage.setItem('unbox-intro-seen', '1'); } catch (e) {}
 (function () {
   var track = document.getElementById('intro-track'), dots = document.querySelectorAll('#intro-dots span'), next = document.getElementById('intro-next');
   var n = dots.length, startUrl = {{ go|tojson }}, hide = document.getElementById('intro-hide'), KEY = 'unbox-no-intro', isPublic = {{ 'true' if public else 'false' }};

@@ -46,8 +46,34 @@ def cube(cx, cy, s, tape=True, top=CREAM, left=MID, right=DARK, qr=False):
     return "\n".join(out)
 
 
+STYLE = """<style>
+.bx{transform-box:fill-box;transform-origin:center}
+.bob{animation:bob 3.2s ease-in-out infinite alternate}.bob2{animation:bob 4.1s ease-in-out -1s infinite alternate}.bob3{animation:bob 3.6s ease-in-out -2s infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-9px)}}
+.pulse{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(.93)}}
+.tw{animation:tw 2s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.35}50%{opacity:1}}
+.dropin{animation:dropin 3.6s ease-in infinite}.dropin.d2{animation-delay:-1.2s}.dropin.d3{animation-delay:-2.4s}
+@keyframes dropin{0%{transform:translateY(-14px);opacity:0}15%{opacity:1}70%{transform:translateY(64px);opacity:1}85%,100%{transform:translateY(74px);opacity:0}}
+.flow{animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-22}}
+.scan{animation:scan 2.6s ease-in-out infinite alternate}
+@keyframes scan{from{transform:translateY(0)}to{transform:translateY(78px)}}
+.shackle{animation:shackle 3.6s ease-in-out infinite}
+@keyframes shackle{0%,30%{transform:translateY(-16px)}45%,85%{transform:translateY(0)}100%{transform:translateY(-16px)}}
+.shake{animation:shake 3.6s ease-in-out infinite}
+@keyframes shake{0%,44%,56%,100%{transform:rotate(0)}48%{transform:rotate(-2.5deg)}52%{transform:rotate(2.5deg)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>"""
+
+
+def g(cls, body):
+    return f'<g class="bx {cls}">{body}</g>'
+
+
 def svg(body):
-    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">\n{body}\n</svg>\n'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">\n{STYLE}\n{body}\n</svg>\n'
 
 
 def corners(x0, y0, x1, y1, n=26, color=TEAL):
@@ -58,22 +84,25 @@ def corners(x0, y0, x1, y1, n=26, color=TEAL):
 
 
 # 1: one parcel inside camera focus brackets, with a few small items floating around it
-a1 = corners(70, 70, 330, 330) + cube(200, 215, 78) + (
-    f'<circle cx="92" cy="108" r="11" fill="{CREAM}"/><circle cx="312" cy="96" r="7" fill="{ORANGE}"/>'
-    f'<rect x="292" y="288" width="22" height="22" rx="5" fill="{MID}" transform="rotate(18 303 299)"/>'
-    f'<rect x="84" y="276" width="16" height="30" rx="5" fill="{DARK}" transform="rotate(-12 92 291)"/>')
+a1 = (g("pulse", corners(70, 70, 330, 330)) + g("bob", cube(200, 215, 78))
+      + g("bob2", f'<circle cx="92" cy="108" r="11" fill="{CREAM}"/>') + g("tw", f'<circle cx="312" cy="96" r="7" fill="{ORANGE}"/>')
+      + g("bob3", f'<rect x="292" y="288" width="22" height="22" rx="5" fill="{MID}" transform="rotate(18 303 299)"/>')
+      + g("bob2", f'<rect x="84" y="276" width="16" height="30" rx="5" fill="{DARK}" transform="rotate(-12 92 291)"/>'))
 # 2: three small parcels dropping into a big one
-a2 = (cube(200, 262, 90, top=CREAM) + cube(120, 130, 34, top=MID, left=DARK, right="#542916", tape=False)
-      + cube(205, 95, 34, top=CREAM, left=MID, right=DARK) + cube(290, 140, 34, top=MID, left=DARK, right="#542916", tape=False)
-      + f'<path d="M120 175 Q140 215 188 222 M205 140 L205 196 M290 185 Q272 215 222 222" stroke="{TEAL}" stroke-width="3" stroke-dasharray="3 8" stroke-linecap="round"/>')
-# 3: a parcel with a QR label
-a3 = cube(200, 205, 110, qr=True) + f'<path d="M64 330 H336" stroke="{TEAL}" stroke-width="3" stroke-linecap="round"/>'
-# 4: a padlock
-a4 = (f'<path d="M140 190 V138 a60 60 0 0 1 120 0 V190" stroke="{CREAM}" stroke-width="26" stroke-linecap="round"/>'
-      f'<rect x="100" y="180" width="200" height="150" rx="26" fill="{CREAM}"/><rect x="100" y="250" width="200" height="80" rx="26" fill="{MID}"/>'
-      f'<rect x="100" y="250" width="200" height="30" fill="{MID}"/>'
-      f'<circle cx="200" cy="248" r="20" fill="#0b0b0b"/><rect x="192" y="252" width="16" height="42" rx="6" fill="#0b0b0b"/>'
-      f'<circle cx="305" cy="110" r="9" fill="{ORANGE}"/>')
+a2 = (g("bob", cube(200, 262, 90, top=CREAM))
+      + g("dropin", cube(120, 120, 28, top=MID, left=DARK, right="#542916", tape=False))
+      + g("dropin d2", cube(200, 100, 28, top=CREAM, left=MID, right=DARK))
+      + g("dropin d3", cube(282, 120, 28, top=MID, left=DARK, right="#542916", tape=False)))
+# 3: a parcel with a QR label that is being scanned
+a3 = (g("bob", cube(200, 205, 110, qr=True))
+      + f'<path d="M119.9 175.3 L184.8 212.6" stroke="{TEAL}" stroke-width="5" stroke-linecap="round" class="bx scan"/>'
+      + f'<path d="M64 330 H336" stroke="{TEAL}" stroke-width="3" stroke-linecap="round" stroke-dasharray="12 10" class="flow"/>')
+# 4: a padlock that locks and unlocks
+a4 = (g("shackle", f'<path d="M140 190 V138 a60 60 0 0 1 120 0 V190" stroke="{CREAM}" stroke-width="26" stroke-linecap="round"/>')
+      + g("shake", f'<rect x="100" y="180" width="200" height="150" rx="26" fill="{CREAM}"/><rect x="100" y="250" width="200" height="80" rx="26" fill="{MID}"/>'
+          f'<rect x="100" y="250" width="200" height="30" fill="{MID}"/>'
+          f'<circle cx="200" cy="248" r="20" fill="#0b0b0b"/><rect x="192" y="252" width="16" height="42" rx="6" fill="#0b0b0b"/>')
+      + g("tw", f'<circle cx="305" cy="110" r="9" fill="{ORANGE}"/>'))
 for i, art in enumerate((a1, a2, a3, a4), 1):
     open(os.path.join(OUT, f"art{i}.svg"), "w").write(svg(art))
 print("done")

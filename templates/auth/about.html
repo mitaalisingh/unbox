@@ -1,0 +1,33 @@
+{% extends "auth/base.html" %}
+{% block title %}About the creator · Unbox{% endblock %}
+{% block topbar %}<header class="topbar"><a class="brand" href="{{ url_for('home') }}">Unbox</a><a class="back" href="{{ back }}">Back</a></header>{% endblock %}
+{% block content %}
+<article class="about">
+  <div class="aboutpic">
+    {% if photo %}<img class="photo" src="{{ url_for('static', filename='about/me.jpg') }}" alt="Mitaali Singh">
+    {% else %}<img class="sketch" src="{{ url_for('static', filename='about/sketch.svg') }}" alt="">{% endif %}
+  </div>
+  <p class="eyebrow">Hey,</p>
+  <p class="cap">A few things about the person who made this</p>
+  <h1 class="serif">Who am I</h1>
+  <p>I'm <strong>Mitaali Singh</strong>. I built Unbox as a college project, on my own, from the first sketch to the live site: the design, the app, the photo-naming AI and the privacy rules.</p>
+
+  <h2 class="serif">Why Unbox</h2>
+  <p>It began with a real move. I packed my brother's things to send across India, and I wanted him to scan a box and see what was inside before he opened anything. He loved it, so I turned it into something anyone can use.</p>
+
+  <h2 class="serif">What it's made of</h2>
+  <p class="chips"><span class="chip">Python</span><span class="chip">Flask</span><span class="chip">Supabase</span><span class="chip">Postgres + pgvector</span><span class="chip">ONNX Runtime</span><span class="chip">SigLIP2</span><span class="chip">Render</span><span class="chip">pytest</span></p>
+
+  <h2 class="serif">What I'm proud of</h2>
+  <ul class="proud">
+    <li>The AI that names your photos runs on a <b>free</b> server, with no paid AI service. I shrank the model from about 1.4 GB to about 350 MB to make it fit.</li>
+    <li>On my test photos it got the name right first time about <b>8 times in 10</b>, and you fix the rest with one tap.</li>
+    <li>Your photos stay private: location data is stripped, files are kept in a private store, and you can delete your account and everything in it.</li>
+    <li>Over 160 automated tests, so changes don't quietly break things.</li>
+  </ul>
+
+  <h2 class="serif">Say hello</h2>
+  <p><a class="chip solid" href="https://github.com/mitaalisingh/unbox" rel="noopener">See the code on GitHub</a></p>
+  <p class="muted small">Unbox is open source (MIT licence). It is a student project, not a company, and it comes with no promises.</p>
+</article>
+{% endblock %}

@@ -1,6 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
-<path d="M96,70 L70,70 L70,96 M304,70 L330,70 L330,96 M96,330 L70,330 L70,304 M304,330 L330,330 L330,304 " stroke="#88B8CE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><polygon points="132.5,176.0 200.0,215.0 200.0,293.0 132.5,254.0" fill="#B79858"/>
+<style>
+.bx{transform-box:fill-box;transform-origin:center}
+.bob{animation:bob 3.2s ease-in-out infinite alternate}.bob2{animation:bob 4.1s ease-in-out -1s infinite alternate}.bob3{animation:bob 3.6s ease-in-out -2s infinite alternate}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-9px)}}
+.pulse{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(.93)}}
+.tw{animation:tw 2s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.35}50%{opacity:1}}
+.dropin{animation:dropin 3.6s ease-in infinite}.dropin.d2{animation-delay:-1.2s}.dropin.d3{animation-delay:-2.4s}
+@keyframes dropin{0%{transform:translateY(-14px);opacity:0}15%{opacity:1}70%{transform:translateY(64px);opacity:1}85%,100%{transform:translateY(74px);opacity:0}}
+.flow{animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-22}}
+.scan{animation:scan 2.6s ease-in-out infinite alternate}
+@keyframes scan{from{transform:translateY(0)}to{transform:translateY(78px)}}
+.shackle{animation:shackle 3.6s ease-in-out infinite}
+@keyframes shackle{0%,30%{transform:translateY(-16px)}45%,85%{transform:translateY(0)}100%{transform:translateY(-16px)}}
+.shake{animation:shake 3.6s ease-in-out infinite}
+@keyframes shake{0%,44%,56%,100%{transform:rotate(0)}48%{transform:rotate(-2.5deg)}52%{transform:rotate(2.5deg)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+<g class="bx pulse"><path d="M96,70 L70,70 L70,96 M304,70 L330,70 L330,96 M96,330 L70,330 L70,304 M304,330 L330,330 L330,304 " stroke="#88B8CE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g><g class="bx bob"><polygon points="132.5,176.0 200.0,215.0 200.0,293.0 132.5,254.0" fill="#B79858"/>
 <polygon points="200.0,215.0 267.5,176.0 267.5,254.0 200.0,293.0" fill="#A13A1E"/>
 <polygon points="200.0,137.0 267.5,176.0 200.0,215.0 132.5,176.0" fill="#FEFAF0"/>
-<polygon points="174.3,151.8 158.1,161.2 225.7,200.2 241.9,190.8" fill="#F1C166"/><circle cx="92" cy="108" r="11" fill="#FEFAF0"/><circle cx="312" cy="96" r="7" fill="#F1C166"/><rect x="292" y="288" width="22" height="22" rx="5" fill="#B79858" transform="rotate(18 303 299)"/><rect x="84" y="276" width="16" height="30" rx="5" fill="#A13A1E" transform="rotate(-12 92 291)"/>
+<polygon points="174.3,151.8 158.1,161.2 225.7,200.2 241.9,190.8" fill="#F1C166"/></g><g class="bx bob2"><circle cx="92" cy="108" r="11" fill="#FEFAF0"/></g><g class="bx tw"><circle cx="312" cy="96" r="7" fill="#F1C166"/></g><g class="bx bob3"><rect x="292" y="288" width="22" height="22" rx="5" fill="#B79858" transform="rotate(18 303 299)"/></g><g class="bx bob2"><rect x="84" y="276" width="16" height="30" rx="5" fill="#A13A1E" transform="rotate(-12 92 291)"/></g>
 </svg>

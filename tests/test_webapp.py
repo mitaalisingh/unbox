@@ -1212,7 +1212,7 @@ def test_app_install_files_are_served(client):
     import json
     m = client.get("/manifest.webmanifest")
     data = json.loads(m.get_data(as_text=True))
-    assert m.mimetype == "application/manifest+json" and data["display"] == "standalone" and data["start_url"] == "/trips"
+    assert m.mimetype == "application/manifest+json" and data["display"] == "standalone" and data["start_url"] == "/"
     sizes = {i["sizes"] for i in data["icons"]}
     assert {"192x192", "512x512"} <= sizes
     for icon in data["icons"]:
@@ -1711,3 +1711,21 @@ def test_trips_still_show_if_the_database_has_no_cover_column_yet(fake, app, mon
     monkeypatch.setattr(fake, "select", select)
     assert "static/trips/trip-" in owner.get("/trips").get_data(as_text=True)
     assert owner.get(f"/trips/{tid}").status_code == 200
+
+
+def test_about_the_creator_is_public_and_reachable(client, fake):
+    page = client.get("/about")
+    html = page.get_data(as_text=True)
+    assert page.status_code == 200 and "Who am I" in html and "Why Unbox" in html and "github.com/mitaalisingh/unbox" in html
+    assert client.get("/static/about/sketch.svg").status_code == 200 and "about/sketch.svg" in html     # a line drawing unless a photo is added
+    assert "About" in client.get("/login").get_data(as_text=True)                                       # linked from the login screens
+    make_user(fake)
+    login(client, "a@example.com")
+    assert "About the creator" in client.get("/account").get_data(as_text=True)                          # and from the profile
+
+
+def test_opening_the_login_link_on_a_new_phone_shows_the_instructions_first(client):
+    for path in ("/login", "/signup", "/forgot"):
+        html = client.get(path).get_data(as_text=True)
+        assert "unbox-intro-seen" in html and "location.replace" in html                                 # once per device, via the home page
+    assert "unbox-intro-seen" in client.get("/").get_data(as_text=True)                                # the instructions mark themselves as seen

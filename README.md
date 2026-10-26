@@ -55,12 +55,13 @@ What exists and has been tested against a real Supabase project:
 - **Delete my account:** under Profile, after re-entering the password and ticking a box, the account is removed for good with all its trips, items and photos (photos are removed first; if that fails nothing is deleted). Copies a friend already made stay with them.
 - **Doodles and tips:** small animated line drawings (box, camera, padlock; they respect "reduce motion") on the home page and empty screens, and a loading screen with a progress bar and rotating usage tips while photos are named, a trip is copied, or an account is deleted.
 - **Trip pictures and a greeting:** each trip card shows one of 30 ready-made illustrations (five scenes in six coffee-shop colour sets, drawn by `tools/make_trip_art.py`); a trip keeps its picture and neighbouring trips differ. The owner can pick any illustration or upload their own photo (Trips → ⋯ → Change picture); uploads are cleaned of location data, kept private, and deleted with the trip. After logging in, "Hey <name>, Welcome here" shows for five seconds. The name comes from an optional field at sign-up or Profile → Your name, otherwise from the email address.
+- **About the creator:** a public page (also linked from the login screens and the profile) with a line portrait, the story behind Unbox, the tools used and what it achieved. To show a real photo instead of the drawing, add one at `static/about/me.jpg`.
 - **Editing:** rename a box or item, change its tags, note and weight, replace or remove its photo (removing deletes the file), move it into another box, and rename a trip. Edits refresh the item's search numbers.
 - **Delete means delete:** removing an item, a box or a trip also removes its photo files. If the files can't be removed, nothing is deleted.
 - **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
 - **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
 
-Automated tests (166, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
+Automated tests (168, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
 
 ```bash
 pip install -r requirements-dev.txt
