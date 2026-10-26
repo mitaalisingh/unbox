@@ -1,6 +1,6 @@
 /* Warm espresso look: glass cards, round buttons, pill chips, photo tiles, floating dock */
 :root{
-  --bg:#2a2723; --panel:#33302c; --ink:#fcfbf8; --body:#e0dcd8; --muted:#a29f9b; --faint:#7d7a75;
+  --bg:#000; --panel:#141414; --ink:#fcfbf8; --body:#e0dcd8; --muted:#a29f9b; --faint:#7d7a75;
   --glass:rgba(231,229,217,.05); --glass-2:rgba(231,229,217,.09); --edge:rgba(231,229,217,.12);
   --paper:#e7e5d9; --accent:#e7e5d9; --accent-ink:#26231d; --danger:#ff9d8f;
   --r-lg:20px; --r-md:14px;
@@ -11,7 +11,7 @@ html{color-scheme:dark}
 html,body{overflow-x:hidden}
 body{
   margin:0;color:var(--body);font:400 16px/1.5 var(--font);min-height:100vh;
-  background:radial-gradient(120% 80% at 50% 25%, #2d2a26 0%, #2a2723 55%, #25221e 100%) fixed;
+  background:#000;
 }
 a{color:var(--paper);text-decoration:none}
 svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -119,3 +119,9 @@ code{background:var(--glass-2);padding:2px 6px;border-radius:6px}
   .sheet{grid-template-columns:repeat(3,1fr)}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* show / hide password */
+.pwwrap{position:relative;display:block}
+.pwwrap input{padding-right:74px}
+.pwtoggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);height:34px;padding:0 12px;border-radius:999px;
+  border:1px solid var(--edge);background:var(--glass-2);color:var(--ink);font:500 13px var(--font);cursor:pointer}

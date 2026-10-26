@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#2a2723">
+<meta name="theme-color" content="#000000">
 <title>{% block title %}Unbox{% endblock %}</title>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
@@ -24,5 +24,18 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+<script>
+// A "Show" button on every password box, so a mistyped password can be seen and fixed.
+document.querySelectorAll('input[type=password]').forEach(function (input) {
+  var wrap = document.createElement('span'), btn = document.createElement('button');
+  wrap.className = 'pwwrap'; input.parentNode.insertBefore(wrap, input); wrap.appendChild(input);
+  btn.type = 'button'; btn.className = 'pwtoggle'; btn.textContent = 'Show'; btn.setAttribute('aria-label', 'Show password');
+  btn.addEventListener('click', function () {
+    var hidden = input.type === 'password'; input.type = hidden ? 'text' : 'password';
+    btn.textContent = hidden ? 'Hide' : 'Show'; btn.setAttribute('aria-label', hidden ? 'Hide password' : 'Show password');
+  });
+  wrap.appendChild(btn);
+});
+</script>
 </body>
 </html>
