@@ -1,0 +1,30 @@
+{% extends "auth/base.html" %}
+{% block title %}Trip settings · Unbox{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('trips') }}">Trips</a>
+  <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
+</div>
+<h1>Trip settings</h1>
+<section class="glass addbox" id="share">
+  <h2 style="margin-top:0">Share with a viewer password</h2>
+  <p class="muted small">{% if trip.viewer_pw_set_at %}A viewer password is set. Anyone with it can look at everything in this trip (they can't change anything).{% else %}Not shared yet. Set a password, print the QR labels, and whoever you give the password to can scan a box and see what's inside, without an account.{% endif %}</p>
+  <form method="post" action="{{ url_for('set_viewer_password', tid=trip.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label>{{ 'New viewer password' if trip.viewer_pw_set_at else 'Viewer password' }} (6 or more characters) <input type="password" name="password" minlength="6" maxlength="100" autocomplete="new-password"></label>
+    <button class="primary" type="submit">{{ 'Change password' if trip.viewer_pw_set_at else 'Set password' }}</button>
+    {% if trip.viewer_pw_set_at %}<button class="danger" type="submit" name="remove" value="1" formnovalidate onclick="return confirm('Turn sharing off? Scanning a label will show nothing.')">Turn sharing off</button>{% endif %}
+  </form>
+</section>
+<p><a class="chip solid" href="{{ url_for('labels', tid=trip.id) }}">🏷 Print QR labels</a></p>
+
+<section class="glass addbox" id="rename">
+  <h2 style="margin-top:0">Rename this trip</h2>
+  <form method="post" action="{{ url_for('rename_trip', tid=trip.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label>Trip name <input name="name" value="{{ trip.name }}" required maxlength="80" autocomplete="off"></label>
+    <button class="primary" type="submit">Save name</button>
+  </form>
+</section>
+
+{% endblock %}

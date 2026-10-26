@@ -15,24 +15,44 @@
 {% if node and not node.is_box %}
   {# ---- one item ---- #}
   {% if urls.get(node.photo_path) %}<img class="hero" src="{{ urls[node.photo_path] }}" alt="{{ node.name }}">{% endif %}
-  <h1>{{ node.name }}</h1>
+  <div class="titlerow"><h1>{{ node.name }}</h1>
+  <details class="more inline">
+    <summary aria-label="More options">⋯</summary>
+    <div class="menu">
+      <a class="menuitem" href="{{ url_for('edit_node', tid=trip.id, nid=node.id) }}">Edit</a>
+      <form method="post" action="{{ url_for('delete_node', tid=trip.id, nid=node.id) }}" onsubmit="return confirm('Delete {{ node.name|e }} for good?')">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="menuitem danger-text" type="submit">Delete this item</button></form>
+    </div>
+  </details></div>
   <div class="chips">
     {% if node.weight_kg is not none %}<span class="chip solid">{{ node.weight_kg }} kg</span>{% endif %}
     {% if node.tags %}<span class="chip">{{ node.tags }}</span>{% endif %}
   </div>
   {% if node.description %}<p class="lead">{{ node.description }}</p>{% endif %}
-  <p><a class="chip solid" href="{{ url_for('edit_node', tid=trip.id, nid=node.id) }}">✎ Edit</a></p>
 {% else %}
   {# ---- the trip's top level, or one box ---- #}
   {% if node and urls.get(node.photo_path) %}<img class="hero" src="{{ urls[node.photo_path] }}" alt="{{ node.name }}">{% endif %}
-  <h1>{{ node.name if node else trip.name }}</h1>
+  <div class="titlerow"><h1>{{ node.name if node else trip.name }}</h1>
+  <details class="more inline">
+    <summary aria-label="More options">⋯</summary>
+    <div class="menu">
+    {% if node %}
+      <a class="menuitem" href="{{ url_for('edit_node', tid=trip.id, nid=node.id) }}">Edit this box</a>
+      <form method="post" action="{{ url_for('delete_node', tid=trip.id, nid=node.id) }}" onsubmit="return confirm('Delete {{ node.name|e }} and everything inside it for good?')">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="menuitem danger-text" type="submit">Delete this box</button></form>
+    {% else %}
+      <a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id) }}#rename">Rename trip</a>
+      <a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id) }}#share">Viewer password</a>
+      <a class="menuitem" href="{{ url_for('labels', tid=trip.id) }}">Print QR labels</a>
+    {% endif %}
+    </div>
+  </details></div>
   <div class="chips">
     <span class="chip solid">{{ total_items }} item{{ '' if total_items == 1 else 's' }}{% if boxes %} · {{ boxes|length }} box{{ '' if boxes|length == 1 else 'es' }} here{% endif %}</span>
     {% if total_kg %}<span class="chip solid">{{ total_kg }} kg known</span>{% endif %}
     {% if node and node.weight_kg is not none %}<span class="chip">box: {{ node.weight_kg }} kg</span>{% endif %}
   </div>
   {% if node and node.description %}<p class="lead">{{ node.description }}</p>{% endif %}
-  {% if node %}<p><a class="chip solid" href="{{ url_for('edit_node', tid=trip.id, nid=node.id) }}">✎ Edit this box</a></p>{% endif %}
 
   {% if boxes %}
   <ul class="stack">
@@ -56,35 +76,7 @@
 
 {% endif %}
 
-{% if not node %}
-<details class="glass addbox">
-  <summary>🔑 Share with a viewer password</summary>
-  <p class="muted small">{% if trip.viewer_pw_set_at %}A viewer password is set. Anyone with it can look at everything in this trip (they can't change anything).{% else %}Not shared yet. Set a password, print the QR labels, and whoever you give the password to can scan a box and see what's inside, without an account.{% endif %}</p>
-  <form method="post" action="{{ url_for('set_viewer_password', tid=trip.id) }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-    <label>{{ 'New viewer password' if trip.viewer_pw_set_at else 'Viewer password' }} (6 or more characters) <input type="password" name="password" minlength="6" maxlength="100" autocomplete="new-password"></label>
-    <button class="primary" type="submit">{{ 'Change password' if trip.viewer_pw_set_at else 'Set password' }}</button>
-    {% if trip.viewer_pw_set_at %}<button class="danger" type="submit" name="remove" value="1" formnovalidate onclick="return confirm('Turn sharing off? Scanning a label will show nothing.')">Turn sharing off</button>{% endif %}
-  </form>
-</details>
-<p><a class="chip solid" href="{{ url_for('labels', tid=trip.id) }}">🏷 Print QR labels</a></p>
 
-<details class="glass addbox">
-  <summary>Rename this trip</summary>
-  <form method="post" action="{{ url_for('rename_trip', tid=trip.id) }}">
-    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-    <label>Trip name <input name="name" value="{{ trip.name }}" required maxlength="80" autocomplete="off"></label>
-    <button class="primary" type="submit">Save name</button>
-  </form>
-</details>
-{% endif %}
-
-{% if node %}
-<form method="post" action="{{ url_for('delete_node', tid=trip.id, nid=node.id) }}" onsubmit="return confirm('Delete {{ node.name|e }}{{ ' and everything inside it' if node.is_box }} for good?')">
-  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-  <button class="danger" type="submit">Delete {{ 'this box and everything in it' if node.is_box else 'this item' }}</button>
-</form>
-{% endif %}
 
 {% if boxes and items %}
 <dialog id="movedlg" class="movedlg">

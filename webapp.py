@@ -788,6 +788,15 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         return redirect(safe_next(back, url_for("trip_view", tid=tid)))
 
     # ---------------- owner: viewer password and printable QR labels ----------------
+    @app.route("/trips/<tid>/settings")
+    @login_required
+    def trip_settings(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        trip = get_trip(tid, token)
+        if not trip:
+            abort(404)
+        return render_template("auth/trip_settings.html", trip=trip)
+
     @app.route("/trips/<tid>/viewer-password", methods=["POST"])
     @login_required
     def set_viewer_password(tid):
@@ -804,7 +813,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             client.update("trips", token, {"id": f"eq.{tid}"}, {"viewer_pw_hash": generate_password_hash(pw),
                                                                "viewer_pw_set_at": datetime.now(timezone.utc).isoformat()})
             flash("Viewer password saved. Anyone who scanned with the old one needs the new one.")
-        return redirect(url_for("trip_view", tid=tid))
+        return redirect(url_for("trip_settings", tid=tid))
 
     @app.route("/trips/<tid>/labels")
     @login_required
@@ -943,8 +952,11 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
                 row = client.insert("nodes", token, {"trip_id": tid, "parent_id": parent_id, "is_box": True, "name": name, "tags": "",
                                                      "description": "", "weight_kg": None, "photo_path": None, "position": position,
                                                      **embedding_field(name, "", "")})
-                flash(f"Created “{name}”. Now add what's inside it.")
-                return redirect(url_for("add_items", tid=tid, box=row["id"]))
+                if request.form.get("next") == "items":
+                    flash(f"Created “{name}”. Now add what's inside it.")
+                    return redirect(url_for("add_items", tid=tid, box=row["id"]))
+                flash(f"Created “{name}”. Drag items onto it, or open it to add some.")
+                return redirect(url_for("node_view", tid=tid, nid=parent_id) if parent_id else url_for("trip_view", tid=tid))
         return render_template("auth/add_storage.html", trip=trip, box=parent)
 
     @app.route("/trips/<tid>/add/items")
@@ -986,7 +998,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         else:
             client.update("trips", token, {"id": f"eq.{tid}"}, {"name": name})
             flash("Trip renamed.")
-        return redirect(url_for("trip_view", tid=tid))
+        return redirect(url_for("trip_settings", tid=tid))
 
     @app.route("/trips/<tid>/n/<nid>/delete", methods=["POST"])
     @login_required

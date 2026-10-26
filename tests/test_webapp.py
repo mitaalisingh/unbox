@@ -1018,17 +1018,31 @@ def test_add_flow_pages_need_login_and_ownership(fake, app):
     assert owner.get(f"/trips/{tid}/add/items?box={item}").status_code == 404      # an item is not a place to put things
 
 
-def test_creating_a_sub_storage_names_it_and_leads_to_adding_items(fake, app):
+def test_creating_a_sub_storage_returns_to_the_trip_so_items_can_be_dragged_in(fake, app):
     owner = app.test_client()
     tid = logged_in_trip(owner, fake)
     r = post(owner, f"/trips/{tid}/add/storage", {"name": "  Kitchen   box "})
     box = fake.tables["nodes"][0]
     assert box["name"] == "Kitchen box" and box["is_box"] and box["parent_id"] is None
-    assert r.status_code == 302 and r.headers["Location"].endswith(f"/trips/{tid}/add/items?box={box['id']}")
+    assert r.status_code == 302 and r.headers["Location"].endswith(f"/trips/{tid}")           # back to the trip, no detour
     assert "Kitchen box" in owner.get(r.headers["Location"]).get_data(as_text=True)
-    assert post(owner, f"/trips/{tid}/add/storage", {"name": "  "}).status_code == 200 and len(fake.tables["nodes"]) == 1
-    post(owner, f"/trips/{tid}/add/storage", {"name": "Shoe bag", "box": box["id"]})     # a storage inside a storage
-    assert fake.tables["nodes"][1]["parent_id"] == box["id"]
+    r = post(owner, f"/trips/{tid}/add/storage", {"name": "Blue bag", "next": "items"})        # or straight on to adding items
+    assert r.headers["Location"].endswith(f"/trips/{tid}/add/items?box={fake.tables['nodes'][1]['id']}")
+    assert post(owner, f"/trips/{tid}/add/storage", {"name": "  "}).status_code == 200 and len(fake.tables["nodes"]) == 2
+    r = post(owner, f"/trips/{tid}/add/storage", {"name": "Shoe bag", "box": box["id"]})       # a storage inside a storage
+    assert fake.tables["nodes"][2]["parent_id"] == box["id"] and r.headers["Location"].endswith(f"/n/{box['id']}")
+
+
+def test_trip_settings_page_holds_rename_sharing_and_labels(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    page = owner.get(f"/trips/{tid}/settings").get_data(as_text=True)
+    assert "Rename this trip" in page and "Share with a viewer password" in page and "Print QR labels" in page
+    trip_page = owner.get(f"/trips/{tid}").get_data(as_text=True)
+    assert "Share with a viewer password" not in trip_page and "Rename this trip" not in trip_page   # tucked away in the menu
+    assert "Rename trip" in trip_page and f"/trips/{tid}/settings" in trip_page
+    stranger = app.test_client()
+    logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
+    assert stranger.get(f"/trips/{tid}/settings").status_code == 404
 
 
 def test_typing_items_in_returns_to_the_add_screen_for_the_next_one(fake, app):

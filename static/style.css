@@ -183,3 +183,8 @@ a.primary-link{display:flex;align-items:center;justify-content:center;padding:15
 .movedlg::backdrop{background:rgba(0,0,0,.7)}
 .movedlg p{margin:0 0 16px;font-size:17px}
 .movedlg .row{display:flex;gap:10px;justify-content:flex-end}
+
+.titlerow{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.titlerow h1{flex:1;min-width:0}
+.more.inline{position:relative;top:auto;right:auto;margin-top:20px;flex:none}
+a.menuitem{text-decoration:none}
