@@ -80,6 +80,10 @@ class FakeSupabase:
         self.passwords_set.append(new_password)
         next(u for u in self.users.values() if u["id"] == uid)["password"] = new_password
 
+    def set_metadata(self, token, data):
+        uid = self._uid(token)
+        next(u for u in self.users.values() if u["id"] == uid)["meta"].update(data)
+
     def sign_out(self, token):
         self.tokens.pop(token, None)
 

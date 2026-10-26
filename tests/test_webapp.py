@@ -109,11 +109,8 @@ def test_unconfirmed_email_is_told_to_confirm(client, fake):
 def test_login_creates_consent_profile_from_signup_data(client, fake):
     make_user(fake)
     r = login(client, "a@example.com")
-    assert r.status_code == 302 and r.headers["Location"].endswith("/welcome")        # first time: the short introduction
+    assert r.status_code == 302 and "/welcome" in r.headers["Location"]               # the short introduction
     assert len(fake.tables["profiles"]) == 1 and fake.tables["profiles"][0]["confirmed_18_plus"] is True
-    client.post("/logout", data={"csrf": csrf(client, "/welcome")})
-    r = login(client, "a@example.com")
-    assert r.headers["Location"].endswith("/trips")                                    # after that, straight to the trips
 
 
 def test_user_without_consent_data_must_confirm_first(client, fake):
@@ -246,7 +243,7 @@ def test_confirmation_link_logs_in(client, fake):
     make_user(fake)
     tokens = fake._issue(fake.users["a@example.com"]["id"], "a@example.com")
     r = post(client, "/auth/session", {"access_token": tokens["access_token"], "refresh_token": tokens["refresh_token"], "type": "signup"})
-    assert r.headers["Location"].endswith("/welcome") and len(fake.tables["profiles"]) == 1
+    assert "/welcome" in r.headers["Location"] and len(fake.tables["profiles"]) == 1
 
 
 def test_expired_or_fake_links_are_handled_kindly(client, fake):
@@ -1430,11 +1427,36 @@ def test_label_qr_scales_as_a_whole_picture_and_is_never_cropped(fake, app):
     assert "viewBox=" in svg and ' width=' not in svg.split(">")[0] and ' height=' not in svg.split(">")[0]
 
 
-def test_an_account_with_no_trips_is_sent_to_the_intro_once_per_device(client, fake):
+def test_the_introduction_shows_at_every_login_until_the_person_hides_it(client, fake):
     make_user(fake)
+    for _ in range(3):                                                           # every login, not just the first
+        r = login(client, "a@example.com")
+        assert r.status_code == 302 and "/welcome" in r.headers["Location"] and "next=" in r.headers["Location"]
+        client.post("/logout", data={"csrf": csrf(client, "/welcome")})
     login(client, "a@example.com")
-    empty = client.get("/trips").get_data(as_text=True)
-    assert "unbox-intro" in empty and "/welcome" in empty                       # the page checks the device and redirects once
-    assert "unbox-intro" in client.get("/welcome").get_data(as_text=True)       # and the intro marks itself as seen
-    post(client, "/trips", {"name": "Move"})
-    assert "unbox-intro" not in client.get("/trips").get_data(as_text=True)     # people with trips never get redirected
+    page = client.get("/welcome?next=/trips").get_data(as_text=True)
+    assert "Don&#39;t show this again" in page or "Don't show this again" in page
+    r = post(client, "/welcome/hide", {"hide": "1", "next": "/trips"})
+    assert r.status_code == 302 and fake.users["a@example.com"]["meta"]["hide_intro"] is True
+    client.post("/logout", data={"csrf": csrf(client, "/trips")})
+    r = login(client, "a@example.com")
+    assert r.headers["Location"].endswith("/trips")                              # hidden: straight to the trips
+    assert "Show this when I log in" in client.get("/welcome").get_data(as_text=True)    # still readable from Instructions
+    post(client, "/welcome/hide", {"hide": "0"})
+    client.post("/logout", data={"csrf": csrf(client, "/trips")})
+    assert "/welcome" in login(client, "a@example.com").headers["Location"]      # and it can be turned back on
+
+
+def test_the_introduction_carries_on_to_the_page_the_person_wanted(client, fake):
+    make_user(fake)
+    r = post(client, "/login?next=/trips/abc", {"email": "a@example.com", "password": GOOD_PW, "next": "/trips/abc"})
+    assert "/welcome" in r.headers["Location"] and "/trips/abc" in r.headers["Location"]
+    assert "/trips/abc" in client.get("/welcome?next=/trips/abc").get_data(as_text=True)
+    assert "evil.com" not in client.get("/welcome?next=https://evil.com").get_data(as_text=True)    # no open redirect
+    assert post(client, "/welcome/hide", {"hide": "1", "next": "https://evil.com"}).headers["Location"].endswith("/trips")
+    assert app_logged_out(client)
+
+
+def app_logged_out(client):
+    anon = client.application.test_client()
+    return anon.post("/welcome/hide", data={"hide": "1"}).status_code in (302, 400)

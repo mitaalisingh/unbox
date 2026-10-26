@@ -171,11 +171,12 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         if not has_profile(user):
             if meta.get("confirmed_18_plus") and meta.get("accepted_terms_at"):
                 create_profile_from_metadata(user, meta)
-                if not nxt:
-                    return redirect(url_for("welcome"))          # first time here: a short introduction
             else:
                 return redirect(url_for("consent"))
-        return redirect(safe_next(nxt, url_for("trips")))
+        target = safe_next(nxt, url_for("trips"))
+        if not meta.get("hide_intro"):                           # the introduction shows at every login until someone hides it
+            return redirect(url_for("welcome", next=target))
+        return redirect(target)
 
     # ---------------- public pages ----------------
     @app.route("/")
@@ -197,7 +198,23 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     @app.route("/welcome")
     @login_required
     def welcome():
-        return render_template("auth/welcome.html")
+        try:
+            hidden = bool(((client.get_user(request.user["token"]) or {}).get("user_metadata") or {}).get("hide_intro"))
+        except SupabaseError:
+            hidden = False
+        return render_template("auth/welcome.html", hidden=hidden, go=safe_next(request.args.get("next"), url_for("trips")))
+
+    @app.route("/welcome/hide", methods=["POST"])
+    @login_required
+    def welcome_hide():
+        """'Don't show this again' (or turn it back on): saved with the account, so it follows the person to any device."""
+        hide = request.form.get("hide") == "1"
+        try:
+            client.set_metadata(request.user["token"], {"hide_intro": hide})
+            flash("Okay. You won't see the introduction when you log in." if hide else "Okay. You'll see the introduction when you log in.")
+        except SupabaseError:
+            flash("Couldn't save that. Please try again.")
+        return redirect(safe_next(request.form.get("next"), url_for("trips")))
 
     @app.route("/privacy")
     def privacy():

@@ -1,6 +1,6 @@
 {% extends "auth/base.html" %}
 {% block title %}Welcome · Unbox{% endblock %}
-{% block topbar %}<header class="topbar"><span class="brand">Unbox</span><a class="back" href="{{ url_for('trips') }}">Skip</a></header>{% endblock %}
+{% block topbar %}<header class="topbar"><span class="brand">Unbox</span><a class="back" href="{{ go }}">Skip</a></header>{% endblock %}
 {% block content %}
 {% set mark %}<span class="mark"><img src="{{ url_for('static', filename='icons/icon-192.png') }}" alt="">Unbox</span>{% endset %}
 <div class="intro">
@@ -37,12 +37,17 @@
   </div>
   <div class="dots" id="intro-dots"><span class="on"></span><span></span><span></span><span></span></div>
   <p style="text-align:center;margin-top:16px"><button type="button" class="primary-link" id="intro-next" style="border:0;width:100%;cursor:pointer">Next</button></p>
+  <form method="post" action="{{ url_for('welcome_hide') }}" style="text-align:center;margin-top:10px">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ go }}">
+    <input type="hidden" name="hide" value="{{ '0' if hidden else '1' }}">
+    <button class="chip" type="submit">{{ 'Show this when I log in' if hidden else "Don't show this again" }}</button>
+  </form>
 </div>
 <script>
-try { localStorage.setItem('unbox-intro', '1'); } catch (e) {}
 (function () {
   var track = document.getElementById('intro-track'), dots = document.querySelectorAll('#intro-dots span'), next = document.getElementById('intro-next');
-  var n = dots.length, startUrl = {{ url_for('trips')|tojson }};
+  var n = dots.length, startUrl = {{ go|tojson }};
   function at() { return Math.max(0, Math.min(n - 1, Math.round(track.scrollLeft / track.clientWidth))); }
   function mark() { var i = at(); dots.forEach(function (d, k) { d.classList.toggle('on', k === i); }); next.textContent = i === n - 1 ? 'Get started' : 'Next'; }
   track.addEventListener('scroll', function () { window.requestAnimationFrame(mark); });

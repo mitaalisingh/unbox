@@ -87,6 +87,10 @@ class Supabase:
     def set_password(self, token, new_password):
         return self._request("PUT", "/auth/v1/user", token=token, json_body={"password": new_password})
 
+    def set_metadata(self, token, data):
+        """Save small per-account preferences (like 'don't show the introduction again') with the account itself."""
+        return self._request("PUT", "/auth/v1/user", token=token, json_body={"data": data})
+
     def sign_out(self, token):
         try:
             self._request("POST", "/auth/v1/logout", token=token)
