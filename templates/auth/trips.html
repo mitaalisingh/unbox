@@ -2,6 +2,13 @@
 {% block title %}Your trips · Unbox{% endblock %}
 {% block content %}
 <h1>Your trips</h1>
+{% if not active and not archived %}
+<script>
+// A brand-new account with no trips yet sees the short introduction once on this device
+// (even if the email link was opened in a different browser, where it was shown instead).
+try { if (!localStorage.getItem('unbox-intro')) { location.replace({{ url_for('welcome')|tojson }}); } } catch (e) {}
+</script>
+{% endif %}
 {% if active %}
 <ul class="stack">
 {% for t in active %}

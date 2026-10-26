@@ -39,6 +39,7 @@
   <p style="text-align:center;margin-top:16px"><button type="button" class="primary-link" id="intro-next" style="border:0;width:100%;cursor:pointer">Next</button></p>
 </div>
 <script>
+try { localStorage.setItem('unbox-intro', '1'); } catch (e) {}
 (function () {
   var track = document.getElementById('intro-track'), dots = document.querySelectorAll('#intro-dots span'), next = document.getElementById('intro-next');
   var n = dots.length, startUrl = {{ url_for('trips')|tojson }};

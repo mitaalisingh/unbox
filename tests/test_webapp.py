@@ -1428,3 +1428,13 @@ def test_label_qr_scales_as_a_whole_picture_and_is_never_cropped(fake, app):
     page = owner.get(f"/trips/{tid}/labels").get_data(as_text=True)
     svg = page[page.index("<svg"):page.index("</svg>")]
     assert "viewBox=" in svg and ' width=' not in svg.split(">")[0] and ' height=' not in svg.split(">")[0]
+
+
+def test_an_account_with_no_trips_is_sent_to_the_intro_once_per_device(client, fake):
+    make_user(fake)
+    login(client, "a@example.com")
+    empty = client.get("/trips").get_data(as_text=True)
+    assert "unbox-intro" in empty and "/welcome" in empty                       # the page checks the device and redirects once
+    assert "unbox-intro" in client.get("/welcome").get_data(as_text=True)       # and the intro marks itself as seen
+    post(client, "/trips", {"name": "Move"})
+    assert "unbox-intro" not in client.get("/trips").get_data(as_text=True)     # people with trips never get redirected
