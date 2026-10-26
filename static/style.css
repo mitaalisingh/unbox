@@ -241,13 +241,13 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 
 /* trip cards: cream, translucent glass with a picture tile that swaps sides, on black */
 .tripcard{position:relative;display:flex;align-items:stretch;gap:12px;padding:10px;border-radius:30px;list-style:none;min-height:118px;color:var(--ink);
-  background:rgba(254,250,240,.84);border:1px solid rgba(255,253,246,.7);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+  background:rgba(254,250,240,.52);border:1px solid rgba(255,253,246,.55);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 .tripcard.flip{flex-direction:row-reverse}
 .tripimg{flex:0 0 42%;aspect-ratio:1.18;border-radius:22px;overflow:hidden;display:block;align-self:center}
 .tripimg img{width:100%;height:100%;object-fit:cover;display:block}
 .tripcard .txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:8px 4px 4px;color:inherit}
 .tripcard .txt strong{font-weight:500;font-size:19px;line-height:1.15;color:#2a1608;overflow-wrap:break-word;hyphens:auto}
-.tripcard .txt small{color:#5d4533;font-size:12.5px;margin-top:14px}
+.tripcard .txt small{color:#3a281a;font-size:12.5px;margin-top:14px}
 .tripcard .more{top:18px;left:18px;right:auto}
 .tripcard.flip .more{left:auto;right:18px}
 .tripcard .more .menu{left:0;right:auto}
