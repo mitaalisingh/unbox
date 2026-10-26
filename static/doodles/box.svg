@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+<style>
+.l{fill:none;stroke:#e7e5d9;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.o{stroke:#e2693a}
+.t{stroke:#5ba39a}
+.d{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.5s ease-out forwards}
+.d2{animation-delay:.35s}.d3{animation-delay:.7s}
+@keyframes draw{to{stroke-dashoffset:0}}
+.tw{transform-box:fill-box;transform-origin:center;animation:tw 1.8s ease-in-out infinite}
+.tw2{animation-delay:.6s}.tw3{animation-delay:1.1s}
+@keyframes tw{0%,100%{opacity:.15;transform:scale(.6)}50%{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}.d{stroke-dashoffset:0}}
+.lid{transform-box:fill-box;transform-origin:50% 100%;animation:lid 2.6s ease-in-out 1.6s infinite}
+@keyframes lid{0%,100%{transform:rotate(0)}50%{transform:rotate(-6deg) translateY(-3px)}}
+.it{animation:pop 2.6s ease-in-out 1.6s infinite}
+@keyframes pop{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+</style>
+<g class="it">
+  <circle class="l o d d2" pathLength="1" cx="82" cy="84" r="11"/>
+  <path class="l d d3" pathLength="1" d="M118 96 V72 q0-7 6-7 h3 q6 0 6 7 V96"/>
+  <path class="l d d3" pathLength="1" d="M121 62 h10"/>
+</g>
+<path class="l d" pathLength="1" d="M40 104 V152 L100 178 L160 152 V104"/>
+<path class="l d d2" pathLength="1" d="M100 128 V178"/>
+<path class="l d d2" pathLength="1" d="M40 104 L100 128 L160 104"/>
+<g class="lid"><path class="l d d3" pathLength="1" d="M40 104 L20 84 L80 62 L100 82"/></g>
+<g class="lid"><path class="l d d3" pathLength="1" d="M160 104 L180 84 L120 62 L100 82"/></g>
+<path class="l o d d3" pathLength="1" d="M68 140 L84 147"/>
+<path class="l t tw" d="M160 38 v14 M153 45 h14"/>
+<path class="l t tw tw2" d="M44 46 v10 M39 51 h10"/>
+<path class="l o tw tw3" d="M172 124 v8 M168 128 h8"/>
+</svg>

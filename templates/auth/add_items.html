@@ -44,14 +44,14 @@
         var results = [], failed = 0, i = 0;
         (function next() {
           if (i >= files.length) {
-            if (!results.length) { status.textContent = 'None of those photos could be used.'; go.style.opacity = ''; go.style.pointerEvents = ''; return; }
+            if (!results.length) { Busy.hide(); status.textContent = 'None of those photos could be used.'; go.style.opacity = ''; go.style.pointerEvents = ''; return; }
             var f = document.createElement('form'); f.method = 'post'; f.action = show;
             [['csrf', form.querySelector('[name=csrf]').value], ['back', back], ['results', JSON.stringify(results)]].forEach(function (p) {
               var h = document.createElement('input'); h.type = 'hidden'; h.name = p[0]; h.value = p[1]; f.appendChild(h);
             });
             document.body.appendChild(f); f.submit(); return;
           }
-          status.textContent = 'Naming photo ' + (i + 1) + ' of ' + files.length + '…' + (failed ? ' (' + failed + ' skipped)' : '');
+          Busy.show('Naming photo ' + (i + 1) + ' of ' + files.length + '…' + (failed ? ' (' + failed + ' skipped)' : ''), 'camera', i / files.length);
           shrink(files[i]).then(function (blob) {
             var d = new FormData();
             d.append('csrf', form.querySelector('[name=csrf]').value); d.append('parent_id', form.querySelector('[name=parent_id]').value);

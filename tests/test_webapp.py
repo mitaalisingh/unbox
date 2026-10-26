@@ -1035,9 +1035,11 @@ def test_creating_a_sub_storage_returns_to_the_trip_so_items_can_be_dragged_in(f
 
 def test_trip_settings_shows_one_section_at_a_time(fake, app):
     owner, tid, big = shared_trip(fake, app, password=None)
-    share = owner.get(f"/trips/{tid}/settings?section=share").get_data(as_text=True)
+    def main_of(html):
+        return html.split("<main>")[1].split("</main>")[0]                        # the page itself, not the shared loading-screen tips
+    share = main_of(owner.get(f"/trips/{tid}/settings?section=share").get_data(as_text=True))
     assert "Share by QR" in share and "Print QR labels" in share and "Rename this trip" not in share
-    rename = owner.get(f"/trips/{tid}/settings?section=rename").get_data(as_text=True)
+    rename = main_of(owner.get(f"/trips/{tid}/settings?section=rename").get_data(as_text=True))
     assert "Rename this trip" in rename and "Share by QR" not in rename
     trip_page = owner.get(f"/trips/{tid}").get_data(as_text=True)
     assert "Share by QR" not in trip_page.split("<main>")[1].split("menu")[0] and "Rename this trip" not in trip_page   # tucked away in the menu
@@ -1554,3 +1556,28 @@ def test_the_item_views_markup_is_well_formed(fake, app):
     assert tree.problems == [] and tree.stack == []                       # every tag opened was closed in the right place
     assert tree.slides == 3 and tree.parent_of_slide == {"track"}         # every slide sits directly inside the swipe track
     assert html.count('class="swipe"') == 1 and html.count('class="grid"') == 1
+
+
+
+def test_doodles_loading_screen_and_the_removed_open_label(fake, app, client):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    trips = owner.get("/trips").get_data(as_text=True)
+    assert "· open" not in trips and "Created" in trips                             # the stray "open" is gone
+    empty = owner.get(f"/trips/{tid}").get_data(as_text=True)
+    assert "doodles/box.svg" in empty and 'id="busy"' in empty                    # a doodle in the empty state, loading screen present
+    for name in ("box", "camera", "lock"):
+        r = client.get(f"/static/doodles/{name}.svg")
+        assert r.status_code == 200 and b"prefers-reduced-motion" in r.data         # animated, but still for people who turn motion off
+    assert "doodles/box.svg" in client.get("/").get_data(as_text=True)              # and on the landing page
+    assert 'class="glass addbox slow"' in owner.get("/account/delete").get_data(as_text=True)
+
+
+def test_a_rejected_login_token_sends_the_person_to_log_in_instead_of_an_error_page(client, fake):
+    make_user(fake)
+    login(client, "a@example.com")
+    fake.tokens.clear()                                                   # the database no longer accepts this person's token
+    fake.refresh_tokens.clear()
+    r = client.get("/trips")
+    assert r.status_code == 302 and "/login" in r.headers["Location"]
+    assert client.get("/trips").status_code == 302                         # and they are logged out

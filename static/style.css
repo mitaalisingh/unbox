@@ -224,3 +224,17 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .dots span.on{background:var(--paper)}
 
 .codebox{font:600 28px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-align:center;background:#000;border:1px dashed var(--paper);border-radius:14px;padding:16px 8px;color:var(--ink);user-select:all;margin:12px 0}
+
+/* doodles and the loading screen */
+.doodle{width:120px;height:120px;display:block;margin:0 auto}
+.doodle.big{width:170px;height:170px}
+.empty{text-align:center;padding:18px 0 6px}
+.empty .muted{margin-top:4px}
+.busy{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.94);display:grid;place-items:center;padding:24px}
+.busybox{width:min(340px,100%);text-align:center}
+.busylabel{font-size:20px;font-weight:500;color:#fff;margin:8px 0 14px}
+.bar{height:4px;border-radius:4px;background:var(--edge);overflow:hidden}
+.bar i{display:block;height:100%;width:4%;background:#5ba39a;border-radius:4px;transition:width .4s ease}
+.tip{margin:26px 0 0;font:400 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:#cfcdc2;min-height:4.2em}
+.tip span{display:block;color:#5ba39a;text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px}
+.tip b{font-weight:400;transition:opacity .25s}

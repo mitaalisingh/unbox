@@ -115,6 +115,15 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         resp.headers["Referrer-Policy"] = "same-origin"
         return resp
 
+    @app.errorhandler(SupabaseError)
+    def database_error(e):
+        """A rejected login token means the session is no longer good: ask the person to log in again, instead of an error page."""
+        if e.status == 401:
+            session.clear()
+            flash("Please log in again.")
+            return redirect(url_for("login"))
+        return "Something went wrong on our side. Please try again in a moment.", 503
+
     # ---------------- sessions ----------------
     def start_session(tokens):
         user = tokens.get("user") or {}

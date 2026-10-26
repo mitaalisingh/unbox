@@ -28,6 +28,14 @@
     {% block content %}{% endblock %}
   </main>
 </div>
+<div id="busy" class="busy" hidden role="status" aria-live="polite">
+  <div class="busybox">
+    <img id="busy-doodle" class="doodle big" src="{{ url_for('static', filename='doodles/box.svg') }}" alt="">
+    <p id="busy-label" class="busylabel">Working on it…</p>
+    <div class="bar"><i id="busy-bar"></i></div>
+    <p class="tip"><span>Tip</span><b id="busy-tip"></b></p>
+  </div>
+</div>
 <script>
 // A "Show" button on every password box, so a mistyped password can be seen and fixed.
 document.querySelectorAll('input[type=password]').forEach(function (input) {
@@ -41,6 +49,35 @@ document.querySelectorAll('input[type=password]').forEach(function (input) {
   wrap.appendChild(btn);
 });
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); }); }
+// The loading screen: a little doodle, what is happening, and a tip while people wait.
+window.Busy = (function () {
+  var root = document.getElementById('busy'), label = document.getElementById('busy-label'), bar = document.getElementById('busy-bar');
+  var doodle = document.getElementById('busy-doodle'), tipEl = document.getElementById('busy-tip'), timer = null, n = 0;
+  var base = {{ url_for('static', filename='doodles/')|tojson }};
+  var tips = [
+    'Take photos in good light, one item per photo, and the names will be better.',
+    'Press and hold an item, then drop it on a storage to move it.',
+    'Tap “All items” to see everything in a trip, whichever box it is in.',
+    'Lock a trip when you are done packing for a clean, view-only look.',
+    'Put the weight in right after uploading. It adds up for you.',
+    'Share by QR lets someone look at a box without making an account.',
+    'A trip code gives a friend their own copy of a trip to edit.',
+    'Print the QR labels from the live site, then scan one before you stick them on.'
+  ];
+  function nextTip() { tipEl.style.opacity = 0; setTimeout(function () { tipEl.textContent = tips[n++ % tips.length]; tipEl.style.opacity = 1; }, 250); }
+  return {
+    show: function (text, which, fraction) {
+      label.textContent = text || 'Working on it…';
+      var src = base + (which || 'box') + '.svg'; if (doodle.getAttribute('data-src') !== src) { doodle.setAttribute('data-src', src); doodle.src = src; }
+      bar.parentNode.hidden = fraction === undefined; if (fraction !== undefined) bar.style.width = Math.max(4, Math.round(fraction * 100)) + '%';
+      if (root.hidden) { root.hidden = false; n = Math.floor(Math.random() * tips.length); nextTip(); timer = setInterval(nextTip, 4500); }
+    },
+    hide: function () { root.hidden = true; clearInterval(timer); }
+  };
+})();
+document.querySelectorAll('form.slow').forEach(function (f) {
+  f.addEventListener('submit', function (e) { if (!e.defaultPrevented) { Busy.show(f.getAttribute('data-busy'), f.getAttribute('data-doodle')); } });
+});
 // Close an open "⋯" menu when tapping anywhere else.
 document.addEventListener('click', function (e) {
   document.querySelectorAll('details.more[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
