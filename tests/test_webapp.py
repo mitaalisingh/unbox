@@ -1036,11 +1036,11 @@ def test_creating_a_sub_storage_returns_to_the_trip_so_items_can_be_dragged_in(f
 def test_trip_settings_shows_one_section_at_a_time(fake, app):
     owner, tid, big = shared_trip(fake, app, password=None)
     share = owner.get(f"/trips/{tid}/settings?section=share").get_data(as_text=True)
-    assert "Share with a viewer password" in share and "Print QR labels" in share and "Rename this trip" not in share
+    assert "Share by QR" in share and "Print QR labels" in share and "Rename this trip" not in share
     rename = owner.get(f"/trips/{tid}/settings?section=rename").get_data(as_text=True)
-    assert "Rename this trip" in rename and "Share with a viewer password" not in rename
+    assert "Rename this trip" in rename and "Share by QR" not in rename
     trip_page = owner.get(f"/trips/{tid}").get_data(as_text=True)
-    assert "Share with a viewer password" not in trip_page and "Rename this trip" not in trip_page   # tucked away in the menu
+    assert "Share by QR" not in trip_page.split("<main>")[1].split("menu")[0] and "Rename this trip" not in trip_page   # tucked away in the menu
     assert "Rename trip" in trip_page and f"/trips/{tid}/settings" in trip_page
     stranger = app.test_client()
     logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
@@ -1460,3 +1460,97 @@ def test_the_introduction_carries_on_to_the_page_the_person_wanted(client, fake)
 def app_logged_out(client):
     anon = client.application.test_client()
     return anon.post("/welcome/hide", data={"hide": "1"}).status_code in (302, 400)
+
+
+
+# ================= share by QR: password is optional, and there is a QR for the whole trip =================
+def test_a_trip_can_be_shared_by_qr_with_no_password(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    viewer = app.test_client()
+    assert viewer.get(f"/v/{tid}/{big}").status_code == 401                          # not shared yet: nothing
+    post(owner, f"/trips/{tid}/viewer-password", {"mode": "open"})
+    trip = fake.tables["trips"][0]
+    assert trip["viewer_pw_set_at"] and trip.get("viewer_pw_hash") is None
+    page = viewer.get(f"/v/{tid}/{big}")
+    assert page.status_code == 200 and "Secret lamp" in page.get_data(as_text=True)    # no password asked
+    assert "Edit" not in page.get_data(as_text=True)
+    assert viewer.get(f"/v/{tid}").status_code == 200                                  # the whole-trip page too
+    other, tid2, big2 = shared_trip(fake, app, password=None, email="b@example.com", name="Theirs")
+    assert viewer.get(f"/v/{tid2}/{big2}").status_code == 401                          # another trip is still closed
+
+
+def test_the_owner_can_switch_between_no_password_a_password_and_off(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    viewer = app.test_client()
+    post(owner, f"/trips/{tid}/viewer-password", {"mode": "open"})
+    assert viewer.get(f"/v/{tid}").status_code == 200
+    post(owner, f"/trips/{tid}/viewer-password", {"mode": "password", "password": "welcome"})     # now ask for one
+    assert fake.tables["trips"][0]["viewer_pw_hash"] and viewer.get(f"/v/{tid}").status_code == 401
+    assert unlock(viewer, tid, "welcome").status_code == 302 and viewer.get(f"/v/{tid}").status_code == 200
+    post(owner, f"/trips/{tid}/viewer-password", {"mode": "open"})                                # and back to no password
+    assert fake.tables["trips"][0].get("viewer_pw_hash") is None and app.test_client().get(f"/v/{tid}").status_code == 200
+    post(owner, f"/trips/{tid}/viewer-password", {"remove": "1"})
+    assert app.test_client().get(f"/v/{tid}").status_code == 401 and viewer.get(f"/v/{tid}").status_code == 401
+
+
+def test_choosing_a_password_needs_one_and_nothing_else_changes(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    for form in ({"mode": "password", "password": "abc"}, {"mode": "password"}, {}):
+        post(owner, f"/trips/{tid}/viewer-password", form)
+        assert not fake.tables["trips"][0].get("viewer_pw_set_at")                   # still not shared
+
+
+def test_the_settings_page_says_whether_sharing_is_on_and_how(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    url = f"/trips/{tid}/settings?section=share"
+    assert "Off" in owner.get(url).get_data(as_text=True)
+    post(owner, f"/trips/{tid}/viewer-password", {"mode": "open"})
+    page = owner.get(url).get_data(as_text=True)
+    assert "On · no password" in page and "Stop sharing" in page
+    post(owner, f"/trips/{tid}/viewer-password", {"mode": "password", "password": "welcome"})
+    page = owner.get(url).get_data(as_text=True)
+    assert "On · asks for a password" in page and "welcome" not in page and fake.tables["trips"][0]["viewer_pw_hash"] not in page
+
+
+def test_labels_include_a_qr_for_the_whole_trip_and_say_how_it_is_shared(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    page = owner.get(f"/trips/{tid}/labels").get_data(as_text=True)
+    assert page.count("<svg") >= 2 and "Whole trip" in page and "Sharing is off" in page
+    post(owner, f"/trips/{tid}/viewer-password", {"mode": "open"})
+    assert "No password is set" in owner.get(f"/trips/{tid}/labels").get_data(as_text=True)
+    post(owner, f"/trips/{tid}/viewer-password", {"mode": "password", "password": "welcome"})
+    assert "asks for your password" in owner.get(f"/trips/{tid}/labels").get_data(as_text=True)
+
+
+def test_the_item_views_markup_is_well_formed(fake, app):
+    """Regression: a stray closing tag once ended the swipe track early, so the grid and swipe views ran together on phones."""
+    from html.parser import HTMLParser
+
+    class Tree(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.stack, self.problems, self.parent_of_slide, self.slides = [], [], set(), 0
+        def handle_starttag(self, tag, attrs):
+            cls = (dict(attrs).get("class") or "").split()
+            if tag in ("img", "input", "br", "meta", "link"):
+                return
+            if "slide" in cls and tag == "div":
+                self.slides += 1
+                self.parent_of_slide.add(self.stack[-1][1] if self.stack else None)
+            self.stack.append((tag, " ".join(cls)))
+        def handle_endtag(self, tag):
+            if not self.stack or self.stack[-1][0] != tag:
+                self.problems.append(f"unexpected </{tag}> after {self.stack[-1] if self.stack else None}")
+                return
+            self.stack.pop()
+
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    for name in ("Mug", "Lamp", "Spoon"):
+        add(owner, tid, {"name": name}, photo=photo_with_gps())
+    html = owner.get(f"/trips/{tid}").get_data(as_text=True)
+    tree = Tree()
+    tree.feed(html)
+    assert tree.problems == [] and tree.stack == []                       # every tag opened was closed in the right place
+    assert tree.slides == 3 and tree.parent_of_slide == {"track"}         # every slide sits directly inside the swipe track
+    assert html.count('class="swipe"') == 1 and html.count('class="grid"') == 1

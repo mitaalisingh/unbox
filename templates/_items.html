@@ -13,7 +13,7 @@
     </a></li>
   {% endfor %}
   </ul>
-  <div class="swipe">
+  <div class="swipe" hidden>
     <div class="track" tabindex="0" aria-label="Swipe through the items">
     {% for i in items %}
       <div class="slide" data-id="{{ i.id }}">
@@ -39,7 +39,6 @@
         </div>
         {% endif %}
       </div>
-      </div>
     {% endfor %}
     </div>
     <p class="count"><span class="cur">1</span> / {{ items|length }}</p>
@@ -54,14 +53,17 @@
 (function () {
   var box = document.currentScript.previousElementSibling, track = box.querySelector('.track'), cur = box.querySelector('.cur');
   var thumbs = box.querySelectorAll('.strip button'), slides = box.querySelectorAll('.slide');
+  var grid = box.querySelector('.grid'), swipe = box.querySelector('.swipe');
   function show(mode) {
     box.setAttribute('data-view', mode);
+    grid.hidden = mode !== 'grid'; swipe.hidden = mode !== 'swipe';        // exactly one of them is on screen
     box.querySelectorAll('.viewtoggle button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-set') === mode ? 'true' : 'false'); });
     try { localStorage.setItem('unbox-view', mode); } catch (e) {}
   }
   box.querySelectorAll('.viewtoggle button').forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-set')); }); });
   var saved = null; try { saved = localStorage.getItem('unbox-view'); } catch (e) {}
   if (saved === 'swipe') show('swipe');
+  box.querySelector('.viewtoggle').addEventListener('click', function () { setTimeout(mark, 0); });
   function mark() {
     var i = Math.round(track.scrollLeft / (track.clientWidth + 14)); i = Math.max(0, Math.min(slides.length - 1, i));
     cur.textContent = i + 1; thumbs.forEach(function (t, k) { t.classList.toggle('on', k === i); });

@@ -467,6 +467,14 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
                 if e.status != 400 or columns == TRIP_COLUMNS[-1]:     # 400 = the database doesn't have a newer column yet
                     raise
 
+    def share_state(tid, token):
+        """'off', 'open' (shared with no password) or 'password' (shared, and asks for one). The password itself is never read out."""
+        rows = client.select("trips", token, {"select": "viewer_pw_hash,viewer_pw_set_at", "id": f"eq.{tid}"})
+        row = rows[0] if rows else {}
+        if not row.get("viewer_pw_set_at"):
+            return "off"
+        return "password" if row.get("viewer_pw_hash") else "open"
+
     def lock_guard(tid, token, as_json=False):
         """A locked trip can only be looked at. If this one is locked, return the response to send instead of changing anything."""
         trip = get_trip(tid, token)
@@ -1039,7 +1047,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             new_code = pending[1]
             session.pop("new_code", None)                                  # shown once; only a scrambled version is kept
         return render_template("auth/trip_settings.html", trip=trip, section=section if section in ("rename", "copy") else "share",
-                               new_code=new_code)
+                               new_code=new_code, share=share_state(tid, token))
 
     @app.route("/trips/<tid>/viewer-password", methods=["POST"])
     @login_required
@@ -1048,15 +1056,21 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         if not get_trip(tid, token):
             abort(404)
         pw = request.form.get("password", "")
+        mode = request.form.get("mode") or ("password" if pw else "")
+        now = datetime.now(timezone.utc).isoformat()
         if request.form.get("remove"):
             client.update("trips", token, {"id": f"eq.{tid}"}, {"viewer_pw_hash": None, "viewer_pw_set_at": None})
-            flash("Sharing is off. Scanning a label now shows nothing.")
-        elif not 6 <= len(pw) <= 100:
-            flash("The viewer password needs to be 6 to 100 characters.")
+            flash("Sharing is off. Scanning a QR now shows nothing.")
+        elif mode == "open":                                       # shared with no password: anyone with the QR can look
+            client.update("trips", token, {"id": f"eq.{tid}"}, {"viewer_pw_hash": None, "viewer_pw_set_at": now})
+            flash("Sharing is on, with no password. Anyone who has the QR can look at this trip.")
+        elif mode == "password" and 6 <= len(pw) <= 100:
+            client.update("trips", token, {"id": f"eq.{tid}"}, {"viewer_pw_hash": generate_password_hash(pw), "viewer_pw_set_at": now})
+            flash("Sharing is on. Scanning asks for your password. Anyone who used an older password needs the new one.")
+        elif mode == "password":
+            flash("The password needs to be 6 to 100 characters.")
         else:
-            client.update("trips", token, {"id": f"eq.{tid}"}, {"viewer_pw_hash": generate_password_hash(pw),
-                                                               "viewer_pw_set_at": datetime.now(timezone.utc).isoformat()})
-            flash("Viewer password saved. Anyone who scanned with the old one needs the new one.")
+            flash("Choose whether to ask for a password.")
         return redirect(url_for("trip_settings", tid=tid, section="share"))
 
     @app.route("/trips/<tid>/labels")
@@ -1070,14 +1084,16 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         everything = request.args.get("all") == "1"
         boxes = [n for n in nodes if n["is_box"] and (everything or not n.get("parent_id"))]
         base = request.url_root.rstrip("/")
-        cards = []
+        total = len([n for n in nodes if not n["is_box"]])
+        cards = [{"node": {"name": trip["name"]}, "count": total, "trip": True,
+                  "svg": segno.make(base + url_for("viewer_view", tid=tid), error="m").svg_inline(scale=8, border=4, light="#fff", omitsize=True)}]
         for b in boxes:
             link = base + url_for("viewer_view", tid=tid, nid=b["id"])
             cards.append({"node": b, "count": rollup(nodes, b["id"])[0],
                           "svg": segno.make(link, error="m").svg_inline(scale=8, border=4, light="#fff", omitsize=True)})
         local = request.host.split(":")[0] in ("localhost", "127.0.0.1", "[::1]")
         return render_template("auth/labels.html", trip=trip, cards=cards, everything=everything, local=local,
-                               shared=bool(trip.get("viewer_pw_set_at")), base=base)
+                               share=share_state(tid, token), base=base)
 
     # ---------------- viewers: no account, just the trip's viewer password ----------------
     VIEWER_DAYS = 7
@@ -1090,9 +1106,12 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
 
     def viewer_allowed(trip):
         """A viewer pass lasts a week, and stops working the moment the owner changes or removes the password."""
-        grant = (session.get("viewer") or {}).get(trip["id"]) if trip else None
-        return bool(grant and trip.get("viewer_pw_hash") and grant[1] == str(trip.get("viewer_pw_set_at"))
-                    and time.time() - grant[0] < VIEWER_DAYS * 86400)
+        if not trip or not trip.get("viewer_pw_set_at"):
+            return False                                                  # not shared at all
+        if not trip.get("viewer_pw_hash"):
+            return True                                                   # shared with no password
+        grant = (session.get("viewer") or {}).get(trip["id"])
+        return bool(grant and grant[1] == str(trip.get("viewer_pw_set_at")) and time.time() - grant[0] < VIEWER_DAYS * 86400)
 
     def ask_for_password(tid, nid, message=None, status=401):
         if message:

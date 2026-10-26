@@ -7,9 +7,11 @@
     <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
   </div>
   <h1>QR labels</h1>
-  <p class="lead">Print these and stick one on each box. Scanning opens <code>{{ base }}/v/…</code> and asks for the viewer password. The QR itself contains no password.</p>
+  <p class="lead">Print these and stick one on each box. The first label is for the whole trip, then one for each box. The QR holds only a link, never a password.</p>
   {% if local %}<p class="flash">This is your computer's own address, so these QR codes won't work on another phone. Open this page from your live site before printing.</p>{% endif %}
-  {% if not shared %}<p class="flash">No viewer password is set yet, so scanning shows nothing. Set one on the trip page first.</p>{% endif %}
+  {% if share == 'off' %}<p class="flash">Sharing is off, so scanning shows nothing. <a href="{{ url_for('trip_settings', tid=trip.id, section='share') }}">Turn on Share by QR</a> first.</p>
+  {% elif share == 'open' %}<p class="flash">No password is set: anyone who has one of these QR codes can look at this trip.</p>
+  {% else %}<p class="flash">Scanning asks for your password, which isn't printed on the label.</p>{% endif %}
   <p>
     <a class="chip" href="{{ url_for('labels', tid=trip.id, all=0 if everything else 1) }}">{{ 'Only big boxes' if everything else 'Include small boxes too' }}</a>
     <button class="chip solid" type="button" onclick="window.print()">Print</button>
@@ -20,7 +22,7 @@
 {% for c in cards %}
   <figure class="label">
     <div class="qr">{{ c.svg|safe }}</div>
-    <figcaption><strong>{{ c.node.name }}</strong><span>{{ c.count }} item{{ '' if c.count == 1 else 's' }}</span><span>Scan to see what's inside</span></figcaption>
+    <figcaption><strong>{{ c.node.name }}</strong><span>{{ 'Whole trip · ' if c.trip }}{{ c.count }} item{{ '' if c.count == 1 else 's' }}</span><span>Scan to see what's inside</span></figcaption>
   </figure>
 {% endfor %}
 </div>

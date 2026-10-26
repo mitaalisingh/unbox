@@ -5,17 +5,28 @@
   <a class="chip" href="{{ url_for('trips') }}">Trips</a>
   <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
 </div>
-<h1>{{ {'rename': 'Rename trip', 'copy': 'Share a copy', 'share': 'Viewer password'}[section] }}</h1>
+<h1>{{ {'rename': 'Rename trip', 'copy': 'Share a copy', 'share': 'Share by QR'}[section] }}</h1>
 {% if section == 'share' %}
 <section class="glass addbox" id="share">
-  <h2 style="margin-top:0">Share with a viewer password</h2>
-  <p class="muted small">{% if trip.viewer_pw_set_at %}A viewer password is set. Anyone with it can look at everything in this trip (they can't change anything).{% else %}Not shared yet. Set a password, print the QR labels, and whoever you give the password to can scan a box and see what's inside, without an account.{% endif %}</p>
+  <h2 style="margin-top:0">Share by QR</h2>
+  <p class="muted small">Anyone who scans a QR label can look at this trip, without an account. They can only look, never change anything. (To give a friend their own editable copy, use a trip code instead.)</p>
+  <p class="chips" style="margin:10px 0"><span class="chip solid">
+    {% if share == 'password' %}On · asks for a password{% elif share == 'open' %}On · no password{% else %}Off{% endif %}</span></p>
   <form method="post" action="{{ url_for('set_viewer_password', tid=trip.id) }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-    <label>{{ 'New viewer password' if trip.viewer_pw_set_at else 'Viewer password' }} (6 or more characters) <input type="password" name="password" minlength="6" maxlength="100" autocomplete="new-password"></label>
-    <button class="primary" type="submit">{{ 'Change password' if trip.viewer_pw_set_at else 'Set password' }}</button>
-    {% if trip.viewer_pw_set_at %}<button class="danger" type="submit" name="remove" value="1" formnovalidate onclick="return confirm('Turn sharing off? Scanning a label will show nothing.')">Turn sharing off</button>{% endif %}
+    <label class="check"><input type="radio" name="mode" value="password" {{ 'checked' if share != 'open' }}> Ask for a password</label><br>
+    <label class="check"><input type="radio" name="mode" value="open" {{ 'checked' if share == 'open' }}> No password (anyone with the QR can look)</label>
+    <label id="pwrow">Password (6 or more characters) <input type="password" name="password" minlength="6" maxlength="100" autocomplete="new-password"></label>
+    <button class="primary compact" type="submit">{{ 'Save' if share != 'off' else 'Start sharing' }}</button>
+    {% if share != 'off' %}<button class="danger" type="submit" name="remove" value="1" formnovalidate onclick="return confirm('Stop sharing? Scanning a QR will show nothing.')">Stop sharing</button>{% endif %}
   </form>
+  <script>
+  (function () {
+    var form = document.currentScript.previousElementSibling, row = form.querySelector('#pwrow');
+    function sync() { var open = form.querySelector('input[value=open]').checked; row.hidden = open; }
+    form.addEventListener('change', sync); sync();
+  })();
+  </script>
 </section>
 <p><a class="chip solid" href="{{ url_for('labels', tid=trip.id) }}">🏷 Print QR labels</a></p>
 {% elif section == 'rename' %}
@@ -30,7 +41,7 @@
 {% else %}
 <section class="glass addbox" id="copy">
   <h2 style="margin-top:0">Trip code</h2>
-  <p class="muted small">Give a friend this code. They enter it on their Trips page, and a full copy of this trip (boxes, items and photos) is added to their account. Their copy is theirs: changes there don't change yours.</p>
+  <p class="muted small">Give a friend this code and a full copy of this trip (boxes, items and photos) is added to their account. Their copy is theirs: changes there don't change yours. (For a view-only look without an account, use Share by QR instead.)</p>
   {% if new_code %}
     <p class="codebox" id="the-code">{{ new_code }}</p>
     <p class="muted small">This is the only time the code is shown. It works for 7 days. Turn it off once your friend has copied the trip.</p>
