@@ -207,6 +207,12 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             return redirect(url_for("trips"))
         return render_template("auth/intro_public.html", go=url_for("login"))
 
+    @app.route("/health")
+    def health():
+        """Answers 'ok' without logging in. With ?deep=1 it also touches Supabase, so a scheduled check keeps both awake."""
+        database = client.ping() if request.args.get("deep") == "1" else None
+        return jsonify(ok=True, database=database)
+
     @app.route("/manifest.webmanifest")
     def manifest():
         resp = send_from_directory(app.static_folder, "manifest.webmanifest", mimetype="application/manifest+json")

@@ -91,6 +91,14 @@ class Supabase:
         """Save small per-account preferences (like 'don't show the introduction again') with the account itself."""
         return self._request("PUT", "/auth/v1/user", token=token, json_body={"data": data})
 
+    def ping(self):
+        """True if Supabase answers. A harmless public request, used by /health to keep the project from going idle."""
+        try:
+            r = self._http.get(self.url + "/auth/v1/settings", headers={"apikey": self.public_key}, timeout=10)
+            return r.status_code == 200
+        except httpx.HTTPError:
+            return False
+
     def sign_out(self, token):
         try:
             self._request("POST", "/auth/v1/logout", token=token)

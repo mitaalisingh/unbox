@@ -1,113 +1,69 @@
 # Unbox
 
-**Scan a QR code on a box and see what's inside, before you open it.**
+**Photograph what you pack. Unbox names it. Scan a QR on the box to see what's inside, before you open it.**
 
-Unbox is a small web app for people who move house, hostel or city. Photograph the things you pack, put them in boxes (boxes can hold smaller boxes), print a QR label for each box, and anyone you share it with can scan the label, browse photos by box, or search for an item without unpacking a thing.
+Unbox is a small web app for people who move house, hostel or city. Take photos of your things, put them in boxes (boxes can hold smaller boxes), print a QR label for each box, and share a trip with family or friends so they can browse it without unpacking anything.
 
-> Built out of a real interstate move: 79 items across 3 big boxes, catalogued with photos so the person receiving them can see what's inside before opening anything.
+> Built out of a real interstate move (Indore to Bangalore): 79 items across 3 big boxes, catalogued with photos so the person receiving them could see what was inside.
 
-![Unbox on a phone: home, a box, an item, search](docs/screenshots/overview.png)
+**Live:** https://unbox-aw54.onrender.com (free hosting: the first visit after a quiet spell can take about a minute to wake up)
 
-## Two parts, at different stages
+![Unbox on a phone: intro, login, trips, a trip](docs/screenshots/overview.png)
 
-| | What it is | Status |
-|---|---|---|
-| **`app.py`** | The single-owner prototype: boxes inside boxes, photos, search, QR labels. Edited on your own computer. | Works. Used for a real move. |
-| **`webapp.py`** | The multi-user version on Supabase (Postgres, Auth, Storage): accounts, trips, boxes inside boxes, items, and private photos. | In progress. Batch photo capture with automatic naming works; sharing is not built yet. |
+## What it does
 
-## The prototype (`app.py`)
+- **Accounts and trips.** Sign up with email (18+ and privacy notice consent are recorded), then keep many trips: create, archive, restore, delete. Every trip gets an illustration; you can pick another or upload your own photo.
+- **Add items fast.** Choose up to 20 photos at once. Each is named automatically by a small open-source image model running on our own server, and one review screen lets you fix the few it got wrong. Unknown things become "Unidentified item". Photos are never sent to another company.
+- **Boxes inside boxes.** Loose items and sub storages (box, bag, drawer). Counts and weights add up. View items as a grid or a swipe view with a Details card (weight, tags, note). Press and hold an item and drop it on a box to move it.
+- **Search inside a trip** by words, typos, or meaning ("something to drink from" finds the mug), using a small open-source text model.
+- **Share view-only by QR.** Turn sharing on with a password or none; print a QR for the whole trip and one per box. Passwords are stored hashed, wrong guesses are rate limited, changing the password ends every old viewer pass.
+- **Trip codes.** A one-time code (valid 7 days, stored only scrambled) lets a friend copy the whole trip, photos included, into their own account.
+- **Lock a trip** once everything is packed: view-only for the owner too, enforced by the server.
+- **Private photos.** GPS and all other metadata are stripped on upload; photos live in a private bucket and are shown through links that expire after an hour.
+- **Delete my account** removes the account with all its trips, items and photos.
+- **Installable** on a phone's home screen; a plain-language privacy notice is built in.
 
-- **Boxes inside boxes.** Big boxes hold small boxes and loose items. Counts and weights roll up.
-- **Photo-first browsing**, designed for a phone: big tap targets, swipe between items.
-- **Search by meaning.** Typing "something to drink from" finds the water bottle and the mug, and "wire for tv" finds the HDMI cable. It uses a small open-source embedding model (`bge-small`, via `fastembed`) that runs on the server's CPU: no paid API, no data sent to a third party.
-- **QR labels** for every box, printable on A4.
-- **Photo tools:** crop, rotate, and iPhone (HEIC) support.
-- **Private by default:** every page and photo sits behind a password, and robots are told not to index it.
+## How it's built
 
-Run it on your computer:
+Python · Flask · Supabase (Postgres with row-level security and pgvector, Auth, Storage) · SigLIP2 image model (ONNX, 4-bit) for naming · `bge-small` (fastembed) for search · Pillow · pytest · Docker · Render
+
+- The database's own row-level rules stop one account from reading another's data. Calls are made with the logged-in user's token; the server's secret key is used only for the viewer and delete-account flows, after the checks.
+- Safety basics: form tokens against forged requests, HttpOnly cookies, no open redirects, security headers.
+- The naming model was chosen to fit a free 512 MB server: about 8 in 10 first suggestions right and 9 in 10 within the top three on a 34-photo test set. Measurements and trade-offs are in [DESIGN.md](DESIGN.md).
+- 170+ automated tests use an in-memory stand-in for Supabase and cover bad input, wrong passwords, forged links, photo cleaning (including a photo that carries GPS) and one user reaching for another's data.
+
+## Run it yourself
+
+You need your own free Supabase project: apply `supabase/schema.sql` in its SQL editor, copy `.env.example` to `.env` and fill in your keys (never commit `.env`), then:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-python seed_sample.py          # makes a made-up inventory in ./data (placeholder pictures)
-EDIT_MODE=1 python app.py      # open http://127.0.0.1:5000
+DEV_HTTP=1 PORT=5050 python webapp.py     # open http://127.0.0.1:5050
 ```
 
-The first run downloads the search model (about 100 MB). `EDIT_MODE=1` turns on the editing screens, which only exist on your own machine. Without it the app is read-only and asks for a password (`APP_PASSWORD`).
-
-## The multi-user app (`webapp.py`)
-
-What exists and has been tested against a real Supabase project:
-
-- **Sign-up** with an 18+ confirmation and consent to the privacy notice, saved with a timestamp
-- **Email confirmation**, login and logout
-- **Forgot password** (the same answer is given whether or not an email has an account)
-- **Trips:** create, archive (hidden but kept), restore, delete for good
-- **Boxes inside boxes, and items** with a name, tags, a note and a weight. Counts and known weights add up through nested boxes.
-- **Private photos:** location data (GPS) and all other hidden metadata are removed on upload, the picture is resized, and it is saved in a private bucket. Photos are shown through links that expire after an hour.
-- **Search inside a trip:** exact words, plurals and typos, plus search by meaning ("something to drink from" finds the mug). Meaning search uses a small open-source text model (`bge-small-en-v1.5`, 384 numbers per item) that runs on the server's CPU, and the comparison happens in Postgres with pgvector. Item text never leaves your own server. It does not look at photos.
-- **Batch capture with naming suggestions:** choose up to 20 photos at once; each is named by a small open-source model running on the server (only the photo half of the model, compared with a precomputed list of 512 everyday item names), then one review screen lets you fix wrong names with a tap. Anything it doesn't recognise becomes "Unidentified item". Photos are never sent to another company.
-- **Share by QR (view only, no account):** the owner turns sharing on for a trip, choosing a password or no password. Labels print a QR for the whole trip and one per box. Scanning shows the trip read-only. With a password, the QR holds only a link and the viewer must type it; passwords are stored hashed, wrong guesses are limited, and changing or turning off sharing ends every existing viewer pass. Without one, anyone who has the QR can look. A **trip code** is different: it copies the trip into a friend's account. The server uses Supabase's secret key for viewing only after the checks.
-- **Add your items flow:** one button asks where items go: loose items, or a new sub storage (a box, bag or drawer, named by you). Then photos (named by the AI) or typed in, one after another. Items show as a grid or a swipe view. A loose item dragged (press and hold on a phone) onto a sub storage asks "Move this into …?" and moves on yes.
-- **Lock a trip:** once you've added everything, lock it from the trip's ⋯ menu and the owner sees view-only mode too, with no add, edit, delete or drag controls (the server refuses changes as well). Unlock to edit again. **All items** shows every item at once; **By storage** groups them by sub storage.
-- **Details under each photo:** in the swipe view every item shows a Details card (weight, tags, note). The owner can add or change weight and note right there, and can enter weights straight after an upload on the review screen. The same card is shown read-only to viewers.
-- **Trip codes:** the owner makes a one-time code (shown once, stored only scrambled, valid 7 days, can be switched off). A friend with an account enters it on their Trips page and a full copy of the trip (boxes, items, weights, notes and photos) lands in their account. It is a copy: the viewer password, lock and code are not carried over, and edits on either side don't affect the other. Wrong guesses are limited.
-- **Delete my account:** under Profile, after re-entering the password and ticking a box, the account is removed for good with all its trips, items and photos (photos are removed first; if that fails nothing is deleted). Copies a friend already made stay with them.
-- **Doodles and tips:** small animated line drawings (box, camera, padlock; they respect "reduce motion") on the home page and empty screens, and a loading screen with a progress bar and rotating usage tips while photos are named, a trip is copied, or an account is deleted.
-- **Trip pictures and a greeting:** each trip card shows one of 30 ready-made illustrations (five scenes in six coffee-shop colour sets, drawn by `tools/make_trip_art.py`); a trip keeps its picture and neighbouring trips differ. The owner can pick any illustration or upload their own photo (Trips → ⋯ → Change picture); uploads are cleaned of location data, kept private, and deleted with the trip. After logging in, "Hey <name>, Welcome here" shows for five seconds. The name comes from an optional field at sign-up or Profile → Your name, otherwise from the email address.
-- **About the creator:** a public page (also linked from the login screens and the profile) with a line portrait, the story behind Unbox, the tools used and what it achieved. To show a real photo instead of the drawing, add one at `static/about/me.jpg`.
-- **Editing:** rename a box or item, change its tags, note and weight, replace or remove its photo (removing deletes the file), move it into another box, and rename a trip. Edits refresh the item's search numbers.
-- **Delete means delete:** removing an item, a box or a trip also removes its photo files. If the files can't be removed, nothing is deleted.
-- **Privacy between users:** the database's row-level rules mean one account cannot see or change another's trips. Every database call is made with the logged-in user's own token, never the server's secret key.
-- **Safety basics:** form tokens against forged requests, HttpOnly cookies, no open redirects, and security headers.
-
-Automated tests (171, using an in-memory stand-in for Supabase) cover bad input, wrong passwords, forged links, expired sessions, photo cleaning (including a photo that carries GPS), file deletion, and one user trying to reach another's data. The real database rules were also checked by hand with two accounts:
+Tests:
 
 ```bash
 pip install -r requirements-dev.txt
 pytest
 ```
 
-To run it you need your own free Supabase project: apply `supabase/schema.sql` in its SQL editor, copy `.env.example` to `.env` and fill in your keys (never commit `.env`), then:
+The first run downloads the models. Supabase's built-in email sender is limited to a few messages an hour on the free plan, so a public launch would need an email provider of its own.
 
-```bash
-DEV_HTTP=1 PORT=5050 python webapp.py     # open http://127.0.0.1:5050
-```
-
-The password-reset email works end to end, but Supabase's built-in email sender is limited to a few messages an hour on the free plan, so real users need an email provider of their own (see the roadmap).
+`app.py` is the original single-owner prototype (boxes, photos, search and QR labels on your own computer); `webapp.py` is the multi-user app above.
 
 ## Roadmap
 
-The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
-
-- [x] Accounts with email confirmation, consent record, many trips per user, archive and delete
-- [x] Hosted database with row-level privacy rules (Supabase)
-- [ ] **Own email provider (SMTP)** before opening to the public: the built-in sender is for testing only and its limits and spam placement would block real users
-- [x] Boxes, items and photos in the multi-user app, with private storage and short-lived photo links
-- [x] **Batch capture:** take photos at your own pace, upload together, review all the suggested names on one screen
-- [ ] Weights in the review screen
-- [x] **Naming suggestions from photos:** choose up to 20 photos, each becomes an item named by a small open-source model that runs on our own server (nothing goes to an AI company), then fix wrong names on one review screen. First suggestion right about 8 times in 10 on a test set; measured results and limits are in [DESIGN.md](DESIGN.md)
-- [ ] Optional cloud boost for naming, only with per-batch consent and a preview of what is sent (not planned yet)
-- [ ] "Scan a pile": one photo, objects found and cropped automatically, unknown ones named "Unidentified item"
-- [x] A viewer password per trip, so the QR itself carries no secret
-- [x] QR labels generated in-app
-- [x] Logo: a box with a QR label on its side (`tools/make_logo.py`, `tools/make_icons.py` draw the SVG and the app icons)
-- [x] Installable on a phone's home screen (web app manifest, icons, a do-nothing service worker that stores no private data)
-- [x] The home page for visitors is the four instruction cards (Skip, or "Don't show this again" on that device), then a liquid-glass login ("Hello! Good to see you") over a soft, moving background; a brand-new account sees the cards once after confirming its email; Profile → Instructions shows them again
-- [x] Location data stripped from every uploaded photo
-- [x] Search inside a trip (by meaning, words and typos)
-- [x] Editing boxes and items (rename, tags, weight, replace or remove the photo, move between boxes) and renaming trips
-- [ ] Measure search quality on a real inventory (top-3 hit rate: keywords vs meaning) and tune the cutoff
-- [ ] A multilingual search model, since the current one is English only
+- [ ] Own email provider (SMTP) before opening to many users
+- [ ] "Scan a pile": one photo, objects found and cropped automatically
+- [ ] Measure search quality on a real inventory and tune it
+- [ ] A multilingual search model (the current one is English only)
 
 ## Privacy
 
-Photos from inside a home are sensitive. The design commitments are written down in [DESIGN.md](DESIGN.md), and a plain-language privacy notice ships with the app (Profile, the login screens and the sign-up tick box link to it). It has not been reviewed by a lawyer.
-
-## Tech
-
-Python · Flask · Supabase (Postgres, Auth, Storage) · SQLite (prototype) · Pillow · fastembed · pytest · Docker · Render
+Photos from inside a home are sensitive. The commitments are written in [DESIGN.md](DESIGN.md), and the app ships a plain-language privacy notice (Profile, the login screens and the sign-up tick box link to it). It has not been reviewed by a lawyer.
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT, covering this code. See [LICENSE](LICENSE). The AI models it downloads have their own licences.

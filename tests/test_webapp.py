@@ -1774,3 +1774,12 @@ def test_contact_and_data_location_come_from_the_server_settings(client, monkeyp
     monkeypatch.setenv("DATA_LOCATION", "Mumbai, India")
     page = client.get("/privacy").get_data(as_text=True)
     assert 'mailto:help@example.com' in page and "Your data is stored in: Mumbai, India." in page and "other countries" not in page
+
+
+def test_health_check_needs_no_login_and_can_touch_the_database(client, fake):
+    r = client.get("/health")
+    assert r.status_code == 200 and r.get_json() == {"ok": True, "database": None}
+    r = client.get("/health?deep=1")
+    assert r.get_json() == {"ok": True, "database": True} and fake.pings == 1
+    body = client.get("/health?deep=1").get_data(as_text=True)
+    assert SECRET_KEY_VALUE not in body and "token" not in body.lower()                  # nothing private in it

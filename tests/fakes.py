@@ -84,6 +84,10 @@ class FakeSupabase:
         uid = self._uid(token)
         next(u for u in self.users.values() if u["id"] == uid)["meta"].update(data)
 
+    def ping(self):
+        self.pings = getattr(self, 'pings', 0) + 1
+        return True
+
     def sign_out(self, token):
         self.tokens.pop(token, None)
 

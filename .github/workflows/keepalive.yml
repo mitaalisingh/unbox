@@ -1,0 +1,19 @@
+name: Keep the site awake
+
+# Free hosting puts the site to sleep after 15 minutes without visitors, and the first visit then waits about 20 seconds.
+# This asks the site a tiny question every 10 minutes, only between 07:30 and 00:29 Indian time, so it is awake when people use it
+# and the free monthly hours are not all used up. It also touches the database so that does not go idle either.
+on:
+  schedule:
+    - cron: "*/10 2-18 * * *"      # UTC hours 02:00 to 18:59 = 07:30 to 00:29 IST
+  workflow_dispatch: {}              # lets you run it by hand from the Actions tab
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ask the site if it is awake
+        run: curl --silent --show-error --max-time 100 "https://unbox-aw54.onrender.com/health?deep=1" || true

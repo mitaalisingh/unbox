@@ -1,0 +1,515 @@
+# General household vocabulary for naming items from photos. One name per line. Lines starting with # are ignored.
+# Written as a broad list of things people pack. Not specific to any one person's belongings.
+# --- kitchen and cooking ---
+kettle
+electric kettle
+frying pan
+saucepan
+pressure cooker
+cooking pot
+wok
+tawa
+roti maker
+rolling pin
+chopping board
+kitchen knife
+knife set
+peeler
+grater
+ladle
+spatula
+tongs
+whisk
+measuring cup
+measuring spoons
+mixing bowl
+colander
+strainer
+toaster
+sandwich maker
+mixer grinder
+blender
+food processor
+juicer
+microwave oven
+air fryer
+induction cooktop
+gas stove
+rice cooker
+water bottle
+flask
+thermos
+lunch box
+tiffin box
+food storage container
+glass jar
+spice rack
+masala box
+oil dispenser
+salt shaker
+kitchen scale
+timer
+kitchen towel
+oven mitt
+apron
+dish rack
+sink organizer
+water filter
+water jug
+ice tray
+can opener
+bottle opener
+cork screw
+cling film
+aluminium foil
+zip lock bags
+vacuum sealer
+# --- tableware ---
+mug
+coffee mug
+travel mug
+tea cup
+cup
+glass tumbler
+wine glass
+plate
+dinner plate
+bowl
+soup bowl
+serving bowl
+spoon
+fork
+cutlery set
+chopsticks
+tray
+serving tray
+tea set
+coaster
+napkin
+placemat
+tablecloth
+teapot
+coffee maker
+pitcher
+# --- cleaning and laundry ---
+vacuum cleaner
+mop
+broom
+dustpan
+bucket
+scrub brush
+sponge
+duster
+microfibre cloth
+cleaning spray
+detergent
+disinfectant liquid
+bleach
+toilet brush
+laundry basket
+clothes hanger
+clothes line
+clothes drying rack
+iron
+ironing board
+steamer
+washing machine
+trash can
+garbage bags
+air freshener
+room freshener
+insect spray
+mosquito racket
+mosquito net
+lint roller
+shoe brush
+# --- bedroom and bedding ---
+bedsheet
+blanket
+quilt
+comforter
+pillow
+pillow cover
+cushion
+mattress
+mattress protector
+curtain
+blackout curtain
+curtain rod
+towel
+bath towel
+carpet
+rug
+doormat
+yoga mat
+bed
+wardrobe
+hanger
+shoe rack
+laundry bag
+sleeping bag
+# --- bathroom and personal care ---
+toothbrush
+toothpaste
+soap
+shampoo
+hair dryer
+straightener
+comb
+hair brush
+razor
+trimmer
+mirror
+makeup kit
+perfume
+deodorant
+lotion
+sunscreen
+nail clipper
+towel rack
+toilet paper
+tissue box
+weighing scale
+bathroom shelf
+soap dispenser
+shower curtain
+hand sanitizer
+first aid kit
+thermometer
+bandage
+medicine box
+knee support
+knee brace
+heating pad
+hot water bag
+massager
+glasses case
+sunglasses
+# --- furniture and storage ---
+table
+folding table
+laptop table
+study table
+chair
+folding chair
+stool
+shelf
+bookshelf
+rack
+metal rack
+storage rack
+storage box
+plastic crate
+basket
+storage basket
+organizer
+drawer organizer
+cabinet
+trolley
+stand
+phone stand
+laptop stand
+monitor stand
+tv stand
+suitcase
+trolley bag
+backpack
+duffel bag
+handbag
+laptop bag
+tote bag
+pouch
+wallet
+umbrella
+# --- decor and lighting ---
+lamp
+table lamp
+desk lamp
+floor lamp
+lampshade
+night light
+projection lamp
+led strip light
+fairy lights
+light bulb
+smart bulb
+candle
+candle holder
+vase
+plant pot
+artificial plant
+photo frame
+wall clock
+alarm clock
+wall hanging
+poster
+painting
+showpiece
+mirror frame
+incense stand
+wind chime
+decorative item
+flower pot
+# --- electronics and electricals ---
+laptop
+laptop charger
+mobile phone
+phone charger
+power bank
+tablet
+headphones
+earphones
+bluetooth speaker
+soundbar
+speaker
+television
+monitor
+keyboard
+mouse
+webcam
+router
+modem
+raspberry pi
+single board computer
+hard disk
+pen drive
+memory card
+camera
+tripod
+smart watch
+fitness band
+band charger
+extension board
+power strip
+travel adapter
+plug adapter
+power adapter
+charger
+usb cable
+hdmi cable
+display cable
+lan cable
+ethernet cable
+power cable
+power cord
+extension cord
+data cable
+adapter
+converter
+battery
+remote control
+fan
+table fan
+heater
+air cooler
+torch
+solar torch
+emergency light
+inverter
+voltage stabilizer
+multimeter
+soldering iron
+# --- tools and hardware ---
+screwdriver
+screwdriver set
+tool kit
+hammer
+pliers
+wrench
+spanner
+drill machine
+drill bits
+tape measure
+spirit level
+saw
+cutter
+scissors
+nails
+screws
+nuts and bolts
+wall plugs
+hooks
+screw hooks
+adhesive hooks
+bracket
+corner bracket
+hinge
+clips
+cable clips
+cable ties
+zip ties
+rope
+jute rope
+twine
+wire
+duct tape
+double sided tape
+masking tape
+glue
+glue gun
+sandpaper
+paint brush
+ladder
+toolbox
+nail organizer
+hardware box
+door stopper
+lock
+padlock
+key
+door handle
+curtain hooks
+rod holder
+# --- stationery and office ---
+notebook
+diary
+pen
+pencil
+marker
+whiteboard marker
+highlighter
+eraser
+duster
+sharpener
+ruler
+stapler
+paper clips
+sticky notes
+file folder
+folder
+envelope
+calculator
+whiteboard
+notice board
+clipboard
+desk organizer
+pen stand
+sketch book
+colour pencils
+paints
+crayons
+glue stick
+tape dispenser
+punching machine
+printer
+printer paper
+stationery
+# --- toys, games and hobbies ---
+playing cards
+card game
+board game
+chess board
+puzzle
+jigsaw
+toy
+soft toy
+teddy bear
+stuffed animal
+plush toy
+doll
+toy car
+building blocks
+lego
+dice
+carrom board
+ludo
+guitar
+ukulele
+keyboard instrument
+book
+paperback book
+novel
+comic book
+magazine
+photo album
+craft supplies
+yarn
+knitting needles
+sewing kit
+needle and thread
+# --- clothing, shoes, accessories ---
+shoes
+sneakers
+sandals
+slippers
+boots
+socks
+tshirt
+shirt
+jeans
+dress
+jacket
+hoodie
+sweater
+scarf
+shawl
+cap
+hat
+gloves
+belt
+tie
+watch
+bracelet
+necklace
+earrings
+jewellery box
+bag
+strap
+hair clip
+hair band
+raincoat
+# --- sports and fitness ---
+dumbbell
+resistance band
+skipping rope
+football
+cricket bat
+cricket ball
+badminton racket
+shuttlecock
+tennis racket
+table tennis bat
+basketball
+frisbee
+gym bag
+water bottle sports
+helmet
+cycle
+cycle lock
+yoga block
+foam roller
+# --- car and travel ---
+car cover
+car wrap
+car charger
+phone holder car
+travel pillow
+luggage lock
+passport holder
+neck pillow
+eye mask
+travel kit
+# --- garden and misc ---
+watering can
+garden tools
+gardening gloves
+seeds
+fertilizer
+plant stand
+bird feeder
+camping tent
+lantern
+binoculars
+toolbox plastic
+packing tape
+bubble wrap
+plastic wrap
+polythene sheet
+carton box
+gift wrap
+shopping bag
+dust cover
+cover sheet
+cloth
+fabric
+fabric strap
