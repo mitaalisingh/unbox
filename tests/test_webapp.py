@@ -1597,18 +1597,18 @@ def test_every_trip_gets_its_own_picture_and_keeps_it(fake, app, client):
     scenes = [(int(u[5:7]) - 1) % 5 for u in used]                                    # the fake lists oldest first
     assert all(a != b for a, b in zip(scenes, scenes[1:]))                           # neighbours are never the same kind of scene
     assert used == _re.findall(r"static/trips/(trip-\d\d\.svg)", owner.get("/trips").get_data(as_text=True))     # and they are stable
-    for i in range(1, 21):
+    for i in range(1, 26):
         assert client.get(f"/static/trips/trip-{i:02d}.svg").status_code == 200
 
 
-def test_twenty_one_trips_still_all_get_a_picture(fake, app):
+def test_more_trips_than_pictures_still_all_get_one(fake, app):
     owner = app.test_client()
     make_user(fake)
     login(owner, "a@example.com")
-    for i in range(21):
+    for i in range(27):
         post(owner, "/trips", {"name": f"T{i}"})
     page = owner.get("/trips").get_data(as_text=True)
-    assert len(_re.findall(r"static/trips/trip-\d\d\.svg", page)) == 21
+    assert len(_re.findall(r"static/trips/trip-\d\d\.svg", page)) == 27
 
 
 def test_the_greeting_uses_the_name_and_shows_once_per_login(client, fake):

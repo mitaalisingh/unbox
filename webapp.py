@@ -438,7 +438,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         except ValueError:
             abort(404)
 
-    TRIP_PICTURES = 20
+    TRIP_PICTURES = 25
 
     def trip_pictures(rows):
         """A different picture for each of someone's trips, picked from 20 ready-made ones. It depends only on the trip,

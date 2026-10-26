@@ -1,5 +1,5 @@
-"""Draws the 20 pictures used on the trip cards (static/trips/trip-01.svg ... trip-20.svg).
-Five little scenes (boxes, a moving van, luggage, a house, a desk) in four pastel colour sets.
+"""Draws the 25 pictures used on the trip cards (static/trips/trip-01.svg ... trip-25.svg).
+Five little scenes (boxes, a moving van, luggage, a house, a desk) in five colour sets.
 Run:  python tools/make_trip_art.py
 """
 import math
@@ -7,12 +7,13 @@ import os
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "trips")
 K = math.sqrt(3) / 2
-# bg, light, main, second, accent, ink (bold food-app colours: olive, tomato, bubblegum, mango)
+# bg, light, main, second, accent, ink  (earthy set: olive, wine, cocoa, cream, fern, butter, sky, cherry, fawn)
 PALETTES = [
-    ("#9bb552", "#fff4d6", "#f2893d", "#c95f27", "#e24b8f", "#3b2a14"),     # olive green tile, orange things
-    ("#e8603a", "#fff1dc", "#f4c23a", "#d99b1f", "#2f7a3e", "#43160c"),     # tomato tile, yolk yellow
-    ("#ec93c9", "#fff0f6", "#e8553a", "#b83a2a", "#5fa046", "#4a1730"),     # bubblegum tile, tomato red
-    ("#f4a93c", "#fff6e0", "#e24b8f", "#a82f68", "#4f9a3a", "#3a1d0a"),     # mango tile, pink
+    ("#5A5E27", "#EFEFC9", "#640017", "#2F1B1A", "#E0C39D", "#2F1B1A"),     # olive tile, wine things
+    ("#8B1717", "#FFF6BF", "#E0C39D", "#563726", "#B5B478", "#2F1B1A"),     # cherry tile, fawn things
+    ("#B5B478", "#FFF6BF", "#8B1717", "#563726", "#D2E1FF", "#2F1B1A"),     # fern tile, cherry things
+    ("#D2E1FF", "#FFF6BF", "#563726", "#2F1B1A", "#8B1717", "#2F1B1A"),     # sky tile, cocoa things
+    ("#563726", "#EFEFC9", "#B5B478", "#8B1717", "#E0C39D", "#2F1B1A"),     # cocoa tile, fern things
 ]
 
 
@@ -93,12 +94,12 @@ def scene_desk(p):
 
 SCENES = [scene_stack, scene_van, scene_luggage, scene_house, scene_desk]
 seen = set()
-for i in range(20):
-    s, c = i % 5, (i // 5 + i % 5) % 4
+for i in range(25):
+    s, c = i % 5, (i // 5 + i % 5) % 5
     assert (s, c) not in seen
     seen.add((s, c))
     p = PALETTES[c]
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">'
            f'<rect width="400" height="240" fill="{p[0]}"/>{SCENES[s](p)}</svg>\n')
     open(os.path.join(OUT, f"trip-{i + 1:02d}.svg"), "w").write(svg)
-print("20 pictures written")
+print("25 pictures written")
