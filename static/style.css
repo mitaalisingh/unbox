@@ -125,3 +125,16 @@ code{background:var(--glass-2);padding:2px 6px;border-radius:6px}
 .pwwrap input{padding-right:74px}
 .pwtoggle{position:absolute;right:8px;top:50%;transform:translateY(-50%);height:34px;padding:0 12px;border-radius:999px;
   border:1px solid var(--edge);background:var(--glass-2);color:var(--ink);font:500 13px var(--font);cursor:pointer}
+
+/* "⋯" menu: rarely used actions tucked away */
+.more{position:relative;flex:none}
+.more summary{list-style:none;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--glass-2);
+  border:1px solid var(--edge);color:var(--ink);font-size:20px;line-height:1;cursor:pointer;user-select:none}
+.more summary::-webkit-details-marker{display:none}
+.more .menu{position:absolute;right:0;top:50px;z-index:30;width:250px;padding:10px;border-radius:16px;background:#161616;border:1px solid var(--edge);
+  box-shadow:0 12px 34px rgba(0,0,0,.7)}
+.more .menu form{margin:0}
+.more .menu label.check{margin:4px 4px 6px}
+.menuitem{display:block;width:100%;text-align:left;padding:12px;border:0;border-radius:10px;background:none;color:var(--ink);font:400 15px var(--font);cursor:pointer}
+.menuitem:hover{background:var(--glass-2)}
+.danger-text{color:var(--danger)}

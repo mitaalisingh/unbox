@@ -36,6 +36,10 @@ document.querySelectorAll('input[type=password]').forEach(function (input) {
   });
   wrap.appendChild(btn);
 });
+// Close an open "⋯" menu when tapping anywhere else.
+document.addEventListener('click', function (e) {
+  document.querySelectorAll('details.more[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+});
 </script>
 </body>
 </html>

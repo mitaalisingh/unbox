@@ -11,14 +11,19 @@
 {% if active %}
 <ul class="stack">
 {% for t in active %}
-  <li class="glass boxcard" style="flex-wrap:wrap">
+  <li class="glass boxcard">
     <a class="txt" href="{{ url_for('trip_view', tid=t['id']) }}" style="color:inherit"><strong>{{ t['name'] }}</strong><small>Created {{ t['created_at'][:10] }} · open</small></a>
-    <form method="post" action="{{ url_for('archive_trip', tid=t['id']) }}" style="margin:0">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="back" type="submit">Archive</button></form>
-    <form method="post" action="{{ url_for('delete_trip', tid=t['id']) }}" style="margin:0;width:100%" onsubmit="return confirm('Delete this trip and everything in it for good?')">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-      <label class="check"><input type="checkbox" name="sure"> I understand deleting can't be undone</label>
-      <button class="danger" type="submit" style="margin-top:8px">Delete forever</button></form>
+    <details class="more">
+      <summary aria-label="More options for {{ t['name'] }}">⋯</summary>
+      <div class="menu">
+        <form method="post" action="{{ url_for('archive_trip', tid=t['id']) }}">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="menuitem" type="submit">Archive (hide, but keep)</button></form>
+        <form method="post" action="{{ url_for('delete_trip', tid=t['id']) }}" onsubmit="return confirm('Delete this trip and everything in it for good?')">
+          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+          <label class="check"><input type="checkbox" name="sure"> I understand deleting can't be undone</label>
+          <button class="menuitem danger-text" type="submit">Delete forever</button></form>
+      </div>
+    </details>
   </li>
 {% endfor %}
 </ul>
