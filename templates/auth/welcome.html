@@ -2,19 +2,41 @@
 {% block title %}Welcome · Unbox{% endblock %}
 {% block topbar %}<header class="topbar"><span class="brand">Unbox</span><a class="back" href="{{ url_for('trips') }}">Skip</a></header>{% endblock %}
 {% block content %}
+{% set mark %}<span class="mark"><img src="{{ url_for('static', filename='icons/icon-192.png') }}" alt="">Unbox</span>{% endset %}
 <div class="intro">
   <div class="track" id="intro-track">
-    <section class="islide"><div class="iicon">📷</div><h1>Photograph what you pack</h1>
-      <p>Take quick photos and upload up to 20 at a time. Unbox suggests a name for each one, so you only fix the few it gets wrong.</p></section>
-    <section class="islide"><div class="iicon">📦</div><h1>Sort it into storage</h1>
-      <p>Group items into boxes, bags or drawers. Made a mistake? Press and hold an item, and drop it onto the right storage.</p></section>
-    <section class="islide"><div class="iicon">🏷️</div><h1>Label it, share it</h1>
-      <p>Print a QR label for each box. Whoever scans it only needs the viewer password you share. No account, and they can't change anything.</p></section>
-    <section class="islide"><div class="iicon">🔒</div><h1>Lock it when you're done</h1>
-      <p>Lock your trip for a clean, view-only look. Unlock it any time to add or change things.</p></section>
+
+    <section class="icard c1" aria-label="Packing, simplified">
+      <h1>Packing,<br>simplified</h1>
+      <img class="art" src="{{ url_for('static', filename='intro/art1.svg') }}" alt="">
+      <div class="foot">{{ mark }}</div>
+      <p class="cap capfoot">Photograph what you pack. Unbox suggests a name for each photo, so you only fix the few it gets wrong.</p>
+    </section>
+
+    <section class="icard c2" aria-label="Everything in its place">
+      <p class="cap">Group items into boxes, bags or drawers. Press and hold an item, then drop it on a storage to move it.</p>
+      <div class="rule"></div>
+      <img class="art" src="{{ url_for('static', filename='intro/art2.svg') }}" alt="">
+      <h1>Everything<br>in its place</h1>
+    </section>
+
+    <section class="icard c3" aria-label="Scan a box, see what's inside">
+      <h1>Scan a box,<br>see what's inside</h1>
+      <img class="art" src="{{ url_for('static', filename='intro/art3.svg') }}" alt="">
+      <div class="foot">{{ mark }}<div class="rule"></div></div>
+      <p class="cap capfoot">Print a QR label for each box. Whoever scans it only needs the viewer password you share. No account needed.</p>
+    </section>
+
+    <section class="icard c4" aria-label="Done? Lock it">
+      <p class="cap">Lock the trip for a clean, view-only look. Unlock it any time to change things.</p>
+      <div class="rule"></div>
+      <img class="art" src="{{ url_for('static', filename='intro/art4.svg') }}" alt="">
+      <h1>Done?<br>Lock it</h1>
+    </section>
+
   </div>
   <div class="dots" id="intro-dots"><span class="on"></span><span></span><span></span><span></span></div>
-  <p style="text-align:center;margin-top:18px"><button type="button" class="primary-link" id="intro-next" style="border:0;width:100%;cursor:pointer">Next</button></p>
+  <p style="text-align:center;margin-top:16px"><button type="button" class="primary-link" id="intro-next" style="border:0;width:100%;cursor:pointer">Next</button></p>
 </div>
 <script>
 (function () {

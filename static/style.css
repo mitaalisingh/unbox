@@ -205,13 +205,20 @@ form.quick label{display:block;margin-bottom:10px;font-size:13px;color:var(--mut
 form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 [hidden]{display:none!important}
 
-/* intro */
-.intro{margin-top:12px}
-.intro .track{gap:0}
-.islide{flex:0 0 100%;scroll-snap-align:center;text-align:center;padding:34px 10px 10px;min-height:340px}
-.iicon{font-size:72px;line-height:1;margin-bottom:18px}
-.islide h1{font-size:26px;margin:0 0 12px}
-.islide p{color:var(--body);font-size:16px;margin:0 auto;max-width:340px}
-.dots{display:flex;gap:8px;justify-content:center;margin-top:12px}
+/* intro: tall dark cards */
+.intro{margin-top:8px}
+.intro .track{gap:12px}
+.icard{flex:0 0 100%;scroll-snap-align:center;position:relative;display:flex;flex-direction:column;justify-content:space-between;
+  min-height:min(64vh,520px);padding:26px 22px;border-radius:28px;background:#0b0b0b;border:1px solid var(--edge);overflow:hidden}
+.icard h1{font-size:30px;line-height:1.12;margin:0;font-weight:500;color:#fff;letter-spacing:-.01em}
+.icard .art{width:min(78%,300px);align-self:center;margin:6px 0;flex:none}
+.icard .cap{font:400 11px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:#cfcdc2;margin:0}
+.icard .capfoot{margin-top:10px}
+.icard .rule{height:2px;width:64%;background:#5ba39a;border-radius:2px;margin:12px 0 0}
+.icard .foot{display:flex;align-items:center;gap:12px}
+.icard .foot .rule{flex:1;margin:0}
+.mark{display:inline-flex;align-items:center;gap:8px;color:#fff;font-weight:500;font-size:15px}
+.mark img{width:26px;height:26px;border-radius:7px}
+.dots{display:flex;gap:8px;justify-content:center;margin-top:14px}
 .dots span{width:8px;height:8px;border-radius:50%;background:var(--edge)}
 .dots span.on{background:var(--paper)}

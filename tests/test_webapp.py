@@ -1228,7 +1228,8 @@ def test_the_introduction_needs_login_and_is_always_reachable_from_the_profile(c
     make_user(fake)
     login(client, "a@example.com")
     page = client.get("/welcome").get_data(as_text=True)
-    assert "Photograph what you pack" in page and "Lock it when you" in page and "Get started" in page
+    assert "simplified" in page and "in its place" in page and "see what" in page and "Lock it" in page and "Get started" in page
+    assert all(client.get(f"/static/intro/art{i}.svg").status_code == 200 for i in (1, 2, 3, 4))
     assert "/welcome" in client.get("/account").get_data(as_text=True)
 
 
