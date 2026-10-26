@@ -1,0 +1,84 @@
+{% extends "auth/base.html" %}
+{% block title %}Add items · Unbox{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('trips') }}">Trips</a>
+  <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
+  {% if box %}<a class="chip" href="{{ url_for('node_view', tid=trip.id, nid=box.id) }}">{{ box.name }}</a>{% endif %}
+</div>
+<h1>Add items</h1>
+<p class="lead">Adding to: <strong>{{ box.name if box else 'loose items in ' ~ trip.name }}</strong></p>
+
+<details class="glass addbox" open>
+  <summary>📷 Upload photos</summary>
+    <form method="post" action="{{ url_for('capture', tid=trip.id) }}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="parent_id" value="{{ box.id if box else '' }}">
+      <label>Photos (up to 20, one item per photo) <input type="file" name="photos" accept="image/*" multiple required></label>
+      <p class="muted small">Each photo is named automatically on our own server, and you fix any that are wrong on the next screen. Location data is removed from photos.</p>
+      <button class="primary" type="submit" id="capture-go">Upload and name</button>
+      <p class="muted small" id="capture-status" role="status"></p>
+    </form>
+    <script>
+    // Sends photos one at a time, shrunk first (so a phone's big photos upload fast), and shows progress.
+    (function () {
+      var form = document.currentScript.previousElementSibling;
+      var status = form.querySelector('#capture-status'), go = form.querySelector('#capture-go');
+      var one = {{ url_for('capture_one', tid=trip.id)|tojson }}, show = {{ url_for('review_show', tid=trip.id)|tojson }};
+      var back = {{ done|tojson }};
+      function shrink(file) {
+        return new Promise(function (resolve) {
+          if (!window.createImageBitmap) return resolve(file);
+          createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bmp) {
+            var s = Math.min(1, 1400 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+            c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+            c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+            c.toBlob(function (b) { resolve(b || file); }, 'image/jpeg', 0.85);
+          }, function () { resolve(file); });          // e.g. a format this browser can't open: send it as it is
+        });
+      }
+      form.addEventListener('submit', function (e) {
+        var files = Array.prototype.slice.call(form.querySelector('input[type=file]').files);
+        if (!files.length || !window.fetch || !window.FormData) return;     // no JavaScript support: normal form post
+        if (files.length > 20) { status.textContent = 'Up to 20 photos at a time, please.'; e.preventDefault(); return; }
+        e.preventDefault(); go.disabled = true;
+        var results = [], failed = 0, i = 0;
+        (function next() {
+          if (i >= files.length) {
+            if (!results.length) { status.textContent = 'None of those photos could be used.'; go.disabled = false; return; }
+            var f = document.createElement('form'); f.method = 'post'; f.action = show;
+            [['csrf', form.querySelector('[name=csrf]').value], ['back', back], ['results', JSON.stringify(results)]].forEach(function (p) {
+              var h = document.createElement('input'); h.type = 'hidden'; h.name = p[0]; h.value = p[1]; f.appendChild(h);
+            });
+            document.body.appendChild(f); f.submit(); return;
+          }
+          status.textContent = 'Naming photo ' + (i + 1) + ' of ' + files.length + '…' + (failed ? ' (' + failed + ' skipped)' : '');
+          shrink(files[i]).then(function (blob) {
+            var d = new FormData();
+            d.append('csrf', form.querySelector('[name=csrf]').value); d.append('parent_id', form.querySelector('[name=parent_id]').value);
+            d.append('photo', blob, 'photo.jpg');
+            return fetch(one, { method: 'POST', body: d, credentials: 'same-origin' });
+          }).then(function (r) { return r.ok ? r.json() : Promise.reject(); })
+            .then(function (j) { results.push(j); }, function () { failed++; })
+            .then(function () { i++; next(); });
+        })();
+      });
+    })();
+    </script>
+</details>
+
+<details class="glass addbox">
+  <summary>✍️ Type them in</summary>
+  <form method="post" action="{{ url_for('add_node', tid=trip.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="parent_id" value="{{ box.id if box else '' }}">
+    <input type="hidden" name="kind" value="item">
+    <input type="hidden" name="again" value="1">
+    <label>Name <input name="name" required maxlength="80" placeholder="e.g. Travel mug" autocomplete="off"></label>
+    <label>Weight in kg (optional) <input name="weight_kg" inputmode="decimal" placeholder="1.5" autocomplete="off"></label>
+    <button class="primary compact" type="submit">Add and next</button>
+  </form>
+</details>
+
+<p style="text-align:center;margin-top:24px"><a class="chip solid" href="{{ done }}">Done, see the items</a></p>
+{% endblock %}

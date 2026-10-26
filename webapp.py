@@ -493,6 +493,8 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             abort(404)
         parent_id = (request.form.get("parent_id") or "").strip() or None
         back = url_for("node_view", tid=tid, nid=parent_id) if parent_id else url_for("trip_view", tid=tid)
+        if request.form.get("again"):                                # typed in from the "add items" screen: stay there for the next one
+            back = url_for("add_items", tid=tid, box=parent_id) if parent_id else url_for("add_items", tid=tid)
         if parent_id:
             parent = client.select("nodes", token, {"select": "id,is_box", "id": f"eq.{trip_id_or_404(parent_id)}", "trip_id": f"eq.{tid}"})
             if not parent or not parent[0]["is_box"]:
@@ -901,6 +903,76 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         session["viewer"] = dict(list(grants.items())[-10:])
         session.permanent = True
         return redirect(url_for("viewer_view", tid=tid, nid=nid) if nid else url_for("viewer_view", tid=tid))
+
+    # ---------------- "Add your items": choose where, then photos or typing ----------------
+    def target_box(tid, token, nodes=None):
+        """The box named by ?box=..., or None for the trip itself. 404 if it isn't a box in this trip."""
+        raw = (request.values.get("box") or "").strip()
+        if not raw:
+            return None
+        box = next((n for n in (nodes or load_nodes(tid, token)) if n["id"] == trip_id_or_404(raw) and n["is_box"]), None)
+        if not box:
+            abort(404)
+        return box
+
+    @app.route("/trips/<tid>/add")
+    @login_required
+    def add_choose(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        trip = get_trip(tid, token)
+        if not trip:
+            abort(404)
+        return render_template("auth/add_choose.html", trip=trip, box=target_box(tid, token))
+
+    @app.route("/trips/<tid>/add/storage", methods=["GET", "POST"])
+    @login_required
+    def add_storage(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        trip = get_trip(tid, token)
+        if not trip:
+            abort(404)
+        nodes = load_nodes(tid, token)
+        parent = target_box(tid, token, nodes)
+        if request.method == "POST":
+            name = " ".join(request.form.get("name", "").split())
+            if not 1 <= len(name) <= 80:
+                flash("Give it a name (up to 80 characters).")
+            else:
+                parent_id = parent["id"] if parent else None
+                position = len([n for n in nodes if n.get("parent_id") == parent_id]) + 1
+                row = client.insert("nodes", token, {"trip_id": tid, "parent_id": parent_id, "is_box": True, "name": name, "tags": "",
+                                                     "description": "", "weight_kg": None, "photo_path": None, "position": position,
+                                                     **embedding_field(name, "", "")})
+                flash(f"Created “{name}”. Now add what's inside it.")
+                return redirect(url_for("add_items", tid=tid, box=row["id"]))
+        return render_template("auth/add_storage.html", trip=trip, box=parent)
+
+    @app.route("/trips/<tid>/add/items")
+    @login_required
+    def add_items(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        trip = get_trip(tid, token)
+        if not trip:
+            abort(404)
+        box = target_box(tid, token)
+        done = url_for("node_view", tid=tid, nid=box["id"]) if box else url_for("trip_view", tid=tid)
+        return render_template("auth/add_items.html", trip=trip, box=box, done=done)
+
+    @app.route("/trips/<tid>/n/<nid>/move", methods=["POST"])
+    @login_required
+    def move_item(tid, nid):
+        """Move one item into a box (used when someone drags it onto a box)."""
+        token, tid, nid = request.user["token"], trip_id_or_404(tid), trip_id_or_404(nid)
+        if not get_trip(tid, token):
+            abort(404)
+        nodes = load_nodes(tid, token)
+        item = next((n for n in nodes if n["id"] == nid and not n["is_box"]), None)
+        box = next((n for n in nodes if n["id"] == trip_id_or_404(request.form.get("parent_id", "")) and n["is_box"]), None)
+        if not item or not box:
+            return jsonify(error="That can't be moved there."), 400
+        client.update("nodes", token, {"id": f"eq.{nid}", "trip_id": f"eq.{tid}"},
+                      {"parent_id": box["id"], "position": len([n for n in nodes if n.get("parent_id") == box["id"]]) + 1})
+        return jsonify(ok=True, item=item["name"], box=box["name"])
 
     @app.route("/trips/<tid>/rename", methods=["POST"])
     @login_required

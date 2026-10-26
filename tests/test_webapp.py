@@ -1001,3 +1001,68 @@ def test_qr_labels_link_to_the_viewer_page_and_contain_no_password(fake, app):
     logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
     assert stranger.get(f"/trips/{tid}/labels").status_code == 404
     assert app.test_client().get(f"/trips/{tid}/labels").status_code == 302   # needs login
+
+
+# ================= "Add your items": choose where, sub storage, type-in, and moving an item =================
+def test_add_flow_pages_need_login_and_ownership(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    stranger = app.test_client()
+    logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
+    anon = app.test_client()
+    for path in (f"/trips/{tid}/add", f"/trips/{tid}/add/storage", f"/trips/{tid}/add/items"):
+        assert anon.get(path).status_code == 302
+        assert stranger.get(path).status_code == 404
+        assert owner.get(path).status_code == 200
+    assert owner.get(f"/trips/{tid}/add/items?box={big}").status_code == 200
+    item = next(n["id"] for n in fake.tables["nodes"] if not n["is_box"])
+    assert owner.get(f"/trips/{tid}/add/items?box={item}").status_code == 404      # an item is not a place to put things
+
+
+def test_creating_a_sub_storage_names_it_and_leads_to_adding_items(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    r = post(owner, f"/trips/{tid}/add/storage", {"name": "  Kitchen   box "})
+    box = fake.tables["nodes"][0]
+    assert box["name"] == "Kitchen box" and box["is_box"] and box["parent_id"] is None
+    assert r.status_code == 302 and r.headers["Location"].endswith(f"/trips/{tid}/add/items?box={box['id']}")
+    assert "Kitchen box" in owner.get(r.headers["Location"]).get_data(as_text=True)
+    assert post(owner, f"/trips/{tid}/add/storage", {"name": "  "}).status_code == 200 and len(fake.tables["nodes"]) == 1
+    post(owner, f"/trips/{tid}/add/storage", {"name": "Shoe bag", "box": box["id"]})     # a storage inside a storage
+    assert fake.tables["nodes"][1]["parent_id"] == box["id"]
+
+
+def test_typing_items_in_returns_to_the_add_screen_for_the_next_one(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    r = post(owner, f"/trips/{tid}/add", {"name": "Spoon", "kind": "item", "parent_id": big, "again": "1"})
+    assert r.status_code == 302 and r.headers["Location"].endswith(f"/trips/{tid}/add/items?box={big}")
+    assert fake.tables["nodes"][-1]["name"] == "Spoon" and fake.tables["nodes"][-1]["parent_id"] == big
+    r = post(owner, f"/trips/{tid}/add", {"name": "Fork", "kind": "item", "again": "1"})
+    assert r.headers["Location"].endswith(f"/trips/{tid}/add/items")                    # loose item: back to the loose-items screen
+
+
+def test_moving_an_item_into_a_sub_storage(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    add(owner, tid, {"name": "Kitchen box", "kind": "box"})
+    add(owner, tid, {"name": "Mug"})
+    box = next(n for n in fake.tables["nodes"] if n["is_box"])
+    mug = next(n for n in fake.tables["nodes"] if n["name"] == "Mug")
+    r = post(owner, f"/trips/{tid}/n/{mug['id']}/move", {"parent_id": box["id"]})
+    assert r.status_code == 200 and r.get_json() == {"ok": True, "item": "Mug", "box": "Kitchen box"}
+    assert mug["parent_id"] == box["id"] and mug["position"] == 1
+    assert "Mug" in owner.get(f"/trips/{tid}/n/{box['id']}").get_data(as_text=True)
+
+
+def test_moves_that_make_no_sense_or_cross_trips_are_refused(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    add(owner, tid, {"name": "Box A", "kind": "box"}); add(owner, tid, {"name": "Box B", "kind": "box"}); add(owner, tid, {"name": "Mug"})
+    a, b = [n for n in fake.tables["nodes"] if n["is_box"]]
+    mug = next(n for n in fake.tables["nodes"] if n["name"] == "Mug")
+    assert post(owner, f"/trips/{tid}/n/{a['id']}/move", {"parent_id": b["id"]}).status_code == 400       # boxes aren't moved this way
+    assert post(owner, f"/trips/{tid}/n/{mug['id']}/move", {"parent_id": mug["id"]}).status_code == 400   # an item isn't a place
+    assert post(owner, f"/trips/{tid}/n/{mug['id']}/move", {"parent_id": "not-an-id"}).status_code == 404
+    stranger = app.test_client()
+    logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
+    assert post(stranger, f"/trips/{tid}/n/{mug['id']}/move", {"parent_id": a["id"]}).status_code == 404
+    assert mug["parent_id"] is None

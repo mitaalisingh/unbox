@@ -37,7 +37,7 @@
   {% if boxes %}
   <ul class="stack">
   {% for b in boxes %}
-    <li><a class="glass boxcard" href="{{ url_for('node_view', tid=trip.id, nid=b.id) }}">
+    <li><a class="glass boxcard" data-drop-box="{{ b.id }}" data-name="{{ b.name }}" draggable="false" href="{{ url_for('node_view', tid=trip.id, nid=b.id) }}">
       <span class="thumbs one">{% if urls.get(b.photo_path) %}<img src="{{ urls[b.photo_path] }}" alt="">{% else %}<span class="emoji">📦</span>{% endif %}</span>
       <span class="txt"><strong>{{ b.name }}</strong><small>{{ stats[b.id][0] }} item{{ '' if stats[b.id][0] == 1 else 's' }}{% if b.weight_kg is not none %} · {{ b.weight_kg }} kg{% endif %}</small></span>
       <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
@@ -50,82 +50,10 @@
   {% if boxes %}<h2>Loose items</h2>{% endif %}
   {% set hrefs = {} %}{% for i in items %}{% set _ = hrefs.update({i.id: url_for('node_view', tid=trip.id, nid=i.id)}) %}{% endfor %}
   {{ item_views(items, urls, hrefs) }}
-  {% elif not boxes %}<p class="muted">Nothing here yet. Add a box or an item below.</p>{% endif %}
+  {% elif not boxes %}<p class="muted">Nothing here yet. Tap “Add your items” to start.</p>{% endif %}
 
-  <details class="glass addbox" {{ 'open' if not boxes and not items }}>
-    <summary>📷 Add items from photos</summary>
-    <form method="post" action="{{ url_for('capture', tid=trip.id) }}" enctype="multipart/form-data">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-      <input type="hidden" name="parent_id" value="{{ node.id if node else '' }}">
-      <label>Photos (up to 20, one item per photo) <input type="file" name="photos" accept="image/*" multiple required></label>
-      <p class="muted small">Each photo is named automatically on our own server, and you fix any that are wrong on the next screen. Location data is removed from photos.</p>
-      <button class="primary" type="submit" id="capture-go">Upload and name</button>
-      <p class="muted small" id="capture-status" role="status"></p>
-    </form>
-    <script>
-    // Sends photos one at a time, shrunk first (so a phone's big photos upload fast), and shows progress.
-    (function () {
-      var form = document.currentScript.previousElementSibling;
-      var status = form.querySelector('#capture-status'), go = form.querySelector('#capture-go');
-      var one = {{ url_for('capture_one', tid=trip.id)|tojson }}, show = {{ url_for('review_show', tid=trip.id)|tojson }};
-      var back = {{ (url_for('node_view', tid=trip.id, nid=node.id) if node else url_for('trip_view', tid=trip.id))|tojson }};
-      function shrink(file) {
-        return new Promise(function (resolve) {
-          if (!window.createImageBitmap) return resolve(file);
-          createImageBitmap(file, { imageOrientation: 'from-image' }).then(function (bmp) {
-            var s = Math.min(1, 1400 / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
-            c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
-            c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-            c.toBlob(function (b) { resolve(b || file); }, 'image/jpeg', 0.85);
-          }, function () { resolve(file); });          // e.g. a format this browser can't open: send it as it is
-        });
-      }
-      form.addEventListener('submit', function (e) {
-        var files = Array.prototype.slice.call(form.querySelector('input[type=file]').files);
-        if (!files.length || !window.fetch || !window.FormData) return;     // no JavaScript support: normal form post
-        if (files.length > 20) { status.textContent = 'Up to 20 photos at a time, please.'; e.preventDefault(); return; }
-        e.preventDefault(); go.disabled = true;
-        var results = [], failed = 0, i = 0;
-        (function next() {
-          if (i >= files.length) {
-            if (!results.length) { status.textContent = 'None of those photos could be used.'; go.disabled = false; return; }
-            var f = document.createElement('form'); f.method = 'post'; f.action = show;
-            [['csrf', form.querySelector('[name=csrf]').value], ['back', back], ['results', JSON.stringify(results)]].forEach(function (p) {
-              var h = document.createElement('input'); h.type = 'hidden'; h.name = p[0]; h.value = p[1]; f.appendChild(h);
-            });
-            document.body.appendChild(f); f.submit(); return;
-          }
-          status.textContent = 'Naming photo ' + (i + 1) + ' of ' + files.length + '…' + (failed ? ' (' + failed + ' skipped)' : '');
-          shrink(files[i]).then(function (blob) {
-            var d = new FormData();
-            d.append('csrf', form.querySelector('[name=csrf]').value); d.append('parent_id', form.querySelector('[name=parent_id]').value);
-            d.append('photo', blob, 'photo.jpg');
-            return fetch(one, { method: 'POST', body: d, credentials: 'same-origin' });
-          }).then(function (r) { return r.ok ? r.json() : Promise.reject(); })
-            .then(function (j) { results.push(j); }, function () { failed++; })
-            .then(function () { i++; next(); });
-        })();
-      });
-    })();
-    </script>
-  </details>
+  <p style="margin:22px 0 4px"><a class="primary-link" href="{{ url_for('add_choose', tid=trip.id, box=node.id if node else None) }}">＋ {{ 'Add items' if node else 'Add your items' }}</a></p>
 
-  <details class="glass addbox">
-    <summary>＋ Add a box, or type an item yourself</summary>
-    <form method="post" action="{{ url_for('add_node', tid=trip.id) }}" enctype="multipart/form-data">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-      <input type="hidden" name="parent_id" value="{{ node.id if node else '' }}">
-      <label class="check"><input type="radio" name="kind" value="item" checked> Item</label>
-      <label class="check"><input type="radio" name="kind" value="box"> Box</label>
-      <label>Name <input name="name" required maxlength="80" placeholder="e.g. Travel mug" autocomplete="off"></label>
-      <label>Tags (optional, helps search) <input name="tags" maxlength="200" placeholder="cup, flask, steel" autocomplete="off"></label>
-      <label>Short note <input name="description" maxlength="300" autocomplete="off"></label>
-      <label>Weight in kg (optional) <input name="weight_kg" inputmode="decimal" placeholder="1.5" autocomplete="off"></label>
-      <label>Photo (optional) <input type="file" name="photo" accept="image/*"></label>
-      <p class="muted small">Location data is removed from photos when you upload them.</p>
-      <button class="primary" type="submit">Add</button>
-    </form>
-  </details>
 {% endif %}
 
 {% if not node %}
@@ -156,5 +84,70 @@
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   <button class="danger" type="submit">Delete {{ 'this box and everything in it' if node.is_box else 'this item' }}</button>
 </form>
+{% endif %}
+
+{% if boxes and items %}
+<dialog id="movedlg" class="movedlg">
+  <p id="movedlg-text"></p>
+  <div class="row"><button type="button" class="chip" id="movedlg-no">No</button><button type="button" class="chip solid" id="movedlg-yes">Yes, move it</button></div>
+</dialog>
+<script>
+// Press and hold an item (or just drag, with a mouse) and drop it on a sub storage to move it there.
+(function () {
+  var csrf = {{ csrf_token()|tojson }}, moveUrl = {{ url_for('move_item', tid=trip.id, nid='NID')|tojson }};
+  var tiles = document.querySelectorAll('.itemview .grid .tile[data-id]'), dlg = document.getElementById('movedlg');
+  var text = document.getElementById('movedlg-text'), yes = document.getElementById('movedlg-yes'), no = document.getElementById('movedlg-no');
+  var pending = null, suppress = false;
+  document.addEventListener('click', function (e) { if (suppress) { e.preventDefault(); e.stopPropagation(); suppress = false; } }, true);
+  function ask(tile, boxEl) {
+    var item = tile.querySelector('.cap strong').textContent.trim(), box = boxEl.getAttribute('data-name');
+    pending = { id: tile.getAttribute('data-id'), box: boxEl.getAttribute('data-drop-box') };
+    text.textContent = 'Move “' + item + '” into “' + box + '”?';
+    if (dlg.showModal) dlg.showModal(); else if (confirm(text.textContent)) yes.click();
+  }
+  no.addEventListener('click', function () { pending = null; dlg.close(); });
+  yes.addEventListener('click', function () {
+    if (!pending) return; yes.disabled = true;
+    var d = new FormData(); d.append('csrf', csrf); d.append('parent_id', pending.box);
+    fetch(moveUrl.replace('NID', pending.id), { method: 'POST', body: d, credentials: 'same-origin' })
+      .then(function () { location.reload(); }, function () { location.reload(); });
+  });
+  tiles.forEach(function (tile) {
+    var timer = null, drag = null, sx = 0, sy = 0, pid = null;
+    function place(x, y) {
+      var g = drag.ghost; g.style.left = (x - drag.w / 2) + 'px'; g.style.top = (y - drag.h / 2) + 'px';
+      var hit = document.elementFromPoint(x, y), over = hit && hit.closest ? hit.closest('[data-drop-box]') : null;
+      if (over !== drag.over) { if (drag.over) drag.over.classList.remove('dropping'); if (over) over.classList.add('dropping'); drag.over = over; }
+    }
+    function begin(x, y) {
+      var r = tile.getBoundingClientRect(), g = tile.cloneNode(true);
+      g.classList.add('ghost'); g.style.width = r.width + 'px'; g.style.height = r.height + 'px'; document.body.appendChild(g);
+      drag = { ghost: g, w: r.width, h: r.height, over: null }; tile.classList.add('lifted');
+      try { tile.setPointerCapture(pid); } catch (e) {}
+      if (navigator.vibrate) navigator.vibrate(15);
+      place(x, y);
+    }
+    function end() {
+      clearTimeout(timer);
+      if (!drag) return;
+      var over = drag.over; drag.ghost.remove(); if (over) over.classList.remove('dropping'); tile.classList.remove('lifted'); drag = null;
+      suppress = true; setTimeout(function () { suppress = false; }, 60);
+      if (over) ask(tile, over);
+    }
+    tile.addEventListener('pointerdown', function (e) {
+      if (e.button) return; sx = e.clientX; sy = e.clientY; pid = e.pointerId;
+      if (e.pointerType !== 'mouse') timer = setTimeout(function () { begin(sx, sy); }, 380);
+    });
+    tile.addEventListener('pointermove', function (e) {
+      if (drag) { e.preventDefault(); place(e.clientX, e.clientY); return; }
+      var far = Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8;
+      if (e.pointerType === 'mouse') { if (e.buttons && far) begin(e.clientX, e.clientY); } else if (far) clearTimeout(timer);
+    });
+    tile.addEventListener('pointerup', end); tile.addEventListener('pointercancel', end);
+    tile.addEventListener('touchmove', function (e) { if (drag) e.preventDefault(); }, { passive: false });
+    tile.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  });
+})();
+</script>
 {% endif %}
 {% endblock %}

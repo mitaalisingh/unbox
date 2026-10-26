@@ -7,8 +7,8 @@
   </div>
   <ul class="grid">
   {% for i in items %}
-    <li><a class="tile" href="{{ hrefs[i.id] }}">
-      {% if urls.get(i.photo_path) %}<img src="{{ urls[i.photo_path] }}" alt="">{% else %}<span class="emoji">🔹</span>{% endif %}
+    <li><a class="tile" data-id="{{ i.id }}" draggable="false" href="{{ hrefs[i.id] }}">
+      {% if urls.get(i.photo_path) %}<img src="{{ urls[i.photo_path] }}" alt="" draggable="false">{% else %}<span class="emoji">🔹</span>{% endif %}
       <span class="cap"><strong>{{ i.name }}</strong>{% if i.weight_kg is not none %}<small>{{ i.weight_kg }} kg</small>{% endif %}</span>
     </a></li>
   {% endfor %}

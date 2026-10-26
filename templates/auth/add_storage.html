@@ -1,0 +1,17 @@
+{% extends "auth/base.html" %}
+{% block title %}New sub storage · Unbox{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
+  {% if box %}<a class="chip" href="{{ url_for('node_view', tid=trip.id, nid=box.id) }}">{{ box.name }}</a>{% endif %}
+  <a class="chip" href="{{ url_for('add_choose', tid=trip.id, box=box.id if box else None) }}">Back</a>
+</div>
+<h1>Name your sub storage</h1>
+<p class="lead">For example “Kitchen box”, “Blue bag” or “Desk drawer”. You'll add what's inside next.</p>
+<form method="post" class="glass addbox" style="margin-top:14px">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="box" value="{{ box.id if box else '' }}">
+  <label>Name <input name="name" required maxlength="80" placeholder="e.g. Kitchen box" autocomplete="off" autofocus></label>
+  <button class="primary compact" type="submit">Create and add items</button>
+</form>
+{% endblock %}

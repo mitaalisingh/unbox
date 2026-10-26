@@ -1,0 +1,21 @@
+{% extends "auth/base.html" %}
+{% block title %}Add your items · Unbox{% endblock %}
+{% block content %}
+<div class="chips">
+  <a class="chip" href="{{ url_for('trips') }}">Trips</a>
+  <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
+  {% if box %}<a class="chip" href="{{ url_for('node_view', tid=trip.id, nid=box.id) }}">{{ box.name }}</a>{% endif %}
+</div>
+<h1>Add your items</h1>
+<p class="lead">Where do they go?</p>
+<ul class="stack">
+  <li><a class="glass boxcard" href="{{ url_for('add_items', tid=trip.id, box=box.id if box else None) }}">
+    <span class="thumbs one"><span class="emoji">🔹</span></span>
+    <span class="txt"><strong>Loose items</strong><small>Not inside any storage{% if box %} (just inside {{ box.name }}){% endif %}</small></span>
+    <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></a></li>
+  <li><a class="glass boxcard" href="{{ url_for('add_storage', tid=trip.id, box=box.id if box else None) }}">
+    <span class="thumbs one"><span class="emoji">📦</span></span>
+    <span class="txt"><strong>A sub storage</strong><small>A box, bag or drawer that holds items</small></span>
+    <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></a></li>
+</ul>
+{% endblock %}
