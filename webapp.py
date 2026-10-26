@@ -1057,7 +1057,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         for b in boxes:
             link = base + url_for("viewer_view", tid=tid, nid=b["id"])
             cards.append({"node": b, "count": rollup(nodes, b["id"])[0],
-                          "svg": segno.make(link, error="m").svg_inline(scale=8, border=4, light="#fff")})
+                          "svg": segno.make(link, error="m").svg_inline(scale=8, border=4, light="#fff", omitsize=True)})
         local = request.host.split(":")[0] in ("localhost", "127.0.0.1", "[::1]")
         return render_template("auth/labels.html", trip=trip, cards=cards, everything=everything, local=local,
                                shared=bool(trip.get("viewer_pw_set_at")), base=base)

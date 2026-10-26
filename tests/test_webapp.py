@@ -1420,3 +1420,11 @@ def test_a_friends_copy_survives_the_original_owner_deleting_their_account(fake,
     assert len(mine) == 1
     copy_lamp = next(n for n in fake.tables["nodes"] if n["trip_id"] == mine[0]["id"] and n["name"] == "Secret lamp")
     assert copy_lamp["photo_path"] in fake.storage                                          # the copy has its own photo file
+
+
+def test_label_qr_scales_as_a_whole_picture_and_is_never_cropped(fake, app):
+    """Regression: the QR was drawn at a fixed size with no viewBox, so the page's CSS cropped it and no phone could scan it."""
+    owner, tid, big = shared_trip(fake, app, password=None)
+    page = owner.get(f"/trips/{tid}/labels").get_data(as_text=True)
+    svg = page[page.index("<svg"):page.index("</svg>")]
+    assert "viewBox=" in svg and ' width=' not in svg.split(">")[0] and ' height=' not in svg.split(">")[0]
