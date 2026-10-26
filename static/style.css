@@ -188,3 +188,6 @@ a.primary-link{display:flex;align-items:center;justify-content:center;padding:15
 .titlerow h1{flex:1;min-width:0}
 .more.inline{position:relative;top:auto;right:auto;margin-top:20px;flex:none}
 a.menuitem{text-decoration:none}
+
+.viewtoggle a{display:inline-block;color:var(--muted);font:500 13px var(--font);padding:7px 16px;border-radius:999px}
+.viewtoggle a[aria-current]{background:var(--paper);color:var(--accent-ink)}

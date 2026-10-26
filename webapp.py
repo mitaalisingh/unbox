@@ -392,8 +392,24 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     NODE_COLUMNS = "id,trip_id,parent_id,is_box,name,description,tags,weight_kg,photo_path,position"
 
     def get_trip(tid, token):
-        rows = client.select("trips", token, {"select": "id,name,archived_at,viewer_pw_set_at", "id": f"eq.{tid}"})
+        try:
+            rows = client.select("trips", token, {"select": "id,name,archived_at,viewer_pw_set_at,locked_at", "id": f"eq.{tid}"})
+        except SupabaseError as e:
+            if e.status != 400:
+                raise
+            # the database hasn't had its "locked_at" update yet: carry on, with locking switched off
+            rows = client.select("trips", token, {"select": "id,name,archived_at,viewer_pw_set_at", "id": f"eq.{tid}"})
         return rows[0] if rows else None
+
+    def lock_guard(tid, token, as_json=False):
+        """A locked trip can only be looked at. If this one is locked, return the response to send instead of changing anything."""
+        trip = get_trip(tid, token)
+        if not (trip and trip.get("locked_at")):
+            return None
+        if as_json:
+            return jsonify(error="This trip is locked. Unlock it to make changes."), 409
+        flash("This trip is locked. Unlock it to make changes.")
+        return redirect(url_for("trip_view", tid=tid))
 
     def load_nodes(tid, token):
         rows = client.select("nodes", token, {"select": NODE_COLUMNS, "trip_id": f"eq.{tid}"})
@@ -448,9 +464,16 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             total_items, total_kg = rollup(nodes, node["id"])
         else:
             total_items, total_kg = 0, 0
+        show_all = node is None and request.args.get("show") == "all"
+        if show_all:                                              # every item in the trip, wherever it is kept
+            items = [n for n in nodes if not n["is_box"]]
+            urls = client.sign_many(BUCKET, [n.get("photo_path") for n in items], token)
+        else:
+            items = [n for n in kids if not n["is_box"]]
         return render_template("auth/trip.html", trip=trip, node=node, crumbs=crumbs_for(nodes, node) if node else [],
-                               boxes=[n for n in kids if n["is_box"]], items=[n for n in kids if not n["is_box"]],
-                               urls=urls, stats=stats, total_items=total_items, total_kg=total_kg)
+                               boxes=[] if show_all else [n for n in kids if n["is_box"]], items=items,
+                               urls=urls, stats=stats, total_items=total_items, total_kg=total_kg,
+                               locked=bool(trip.get("locked_at")), show_all=show_all)
 
     @app.route("/trips/<tid>")
     @login_required
@@ -491,6 +514,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         token, tid = request.user["token"], trip_id_or_404(tid)
         if not get_trip(tid, token):
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         parent_id = (request.form.get("parent_id") or "").strip() or None
         back = url_for("node_view", tid=tid, nid=parent_id) if parent_id else url_for("trip_view", tid=tid)
         if request.form.get("again"):                                # typed in from the "add items" screen: stay there for the next one
@@ -598,6 +624,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         token, tid, nid = request.user["token"], trip_id_or_404(tid), trip_id_or_404(nid)
         if not get_trip(tid, token):
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         nodes = load_nodes(tid, token)
         node = next((n for n in nodes if n["id"] == nid), None)
         if not node:
@@ -691,6 +720,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         token, tid = request.user["token"], trip_id_or_404(tid)
         if not get_trip(tid, token):
             abort(404)
+        blocked = lock_guard(tid, token, as_json=True)
+        if blocked:
+            return blocked
         parent_id = (request.form.get("parent_id") or "").strip() or None
         if parent_id:
             parent = client.select("nodes", token, {"select": "id,is_box", "id": f"eq.{trip_id_or_404(parent_id)}", "trip_id": f"eq.{tid}"})
@@ -735,6 +767,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         token, tid = request.user["token"], trip_id_or_404(tid)
         if not get_trip(tid, token):
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         parent_id = (request.form.get("parent_id") or "").strip() or None
         back = url_for("node_view", tid=tid, nid=parent_id) if parent_id else url_for("trip_view", tid=tid)
         if parent_id:
@@ -773,6 +808,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         token, tid = request.user["token"], trip_id_or_404(tid)
         if not get_trip(tid, token):
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         changed = 0
         for raw in request.form.getlist("id")[:MAX_BATCH]:
             nid = trip_id_or_404(raw)
@@ -788,6 +826,20 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         return redirect(safe_next(back, url_for("trip_view", tid=tid)))
 
     # ---------------- owner: viewer password and printable QR labels ----------------
+    @app.route("/trips/<tid>/lock", methods=["POST"])
+    @login_required
+    def lock_trip(tid):
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        locking = request.form.get("lock") == "1"
+        try:
+            client.update("trips", token, {"id": f"eq.{tid}"}, {"locked_at": datetime.now(timezone.utc).isoformat() if locking else None})
+            flash("Locked. The trip is now view-only." if locking else "Unlocked. You can edit again.")
+        except SupabaseError:
+            flash("Couldn't change the lock. The database may need its latest update first.")
+        return redirect(url_for("trip_view", tid=tid))
+
     @app.route("/trips/<tid>/settings")
     @login_required
     def trip_settings(tid):
@@ -931,6 +983,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         trip = get_trip(tid, token)
         if not trip:
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         return render_template("auth/add_choose.html", trip=trip, box=target_box(tid, token))
 
     @app.route("/trips/<tid>/add/storage", methods=["GET", "POST"])
@@ -940,6 +995,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         trip = get_trip(tid, token)
         if not trip:
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         nodes = load_nodes(tid, token)
         parent = target_box(tid, token, nodes)
         if request.method == "POST":
@@ -966,6 +1024,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         trip = get_trip(tid, token)
         if not trip:
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         box = target_box(tid, token)
         done = url_for("node_view", tid=tid, nid=box["id"]) if box else url_for("trip_view", tid=tid)
         return render_template("auth/add_items.html", trip=trip, box=box, done=done)
@@ -977,6 +1038,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         token, tid, nid = request.user["token"], trip_id_or_404(tid), trip_id_or_404(nid)
         if not get_trip(tid, token):
             abort(404)
+        blocked = lock_guard(tid, token, as_json=True)
+        if blocked:
+            return blocked
         nodes = load_nodes(tid, token)
         item = next((n for n in nodes if n["id"] == nid and not n["is_box"]), None)
         box = next((n for n in nodes if n["id"] == trip_id_or_404(request.form.get("parent_id", "")) and n["is_box"]), None)
@@ -992,6 +1056,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         token, tid = request.user["token"], trip_id_or_404(tid)
         if not get_trip(tid, token):
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         name = " ".join(request.form.get("name", "").split())
         if not 1 <= len(name) <= 80:
             flash("Give the trip a name (up to 80 characters).")
@@ -1006,6 +1073,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         token, tid, nid = request.user["token"], trip_id_or_404(tid), trip_id_or_404(nid)
         if not get_trip(tid, token):
             abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
         nodes = load_nodes(tid, token)
         node = next((n for n in nodes if n["id"] == nid), None)
         if not node:

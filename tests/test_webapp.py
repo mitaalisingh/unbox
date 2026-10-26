@@ -1080,3 +1080,68 @@ def test_moves_that_make_no_sense_or_cross_trips_are_refused(fake, app):
     logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
     assert post(stranger, f"/trips/{tid}/n/{mug['id']}/move", {"parent_id": a["id"]}).status_code == 404
     assert mug["parent_id"] is None
+
+
+# ================= lock a trip (view only, even for the owner) and the "all items" view =================
+def lock(owner, tid, on=True):
+    return post(owner, f"/trips/{tid}/lock", {"lock": "1" if on else "0"})
+
+
+def test_locking_hides_every_editing_control_and_unlocking_brings_them_back(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    page = owner.get(f"/trips/{tid}").get_data(as_text=True)
+    assert "Add your items" in page and "Lock trip" in page and "Rename trip" in page
+    lock(owner, tid)
+    assert fake.tables["trips"][0]["locked_at"]
+    page = owner.get(f"/trips/{tid}").get_data(as_text=True)
+    assert "Locked" in page and "Unlock trip" in page and "Big box" in page
+    assert "Add your items" not in page and "Rename trip" not in page and "Lock trip" not in page
+    box_page = owner.get(f"/trips/{tid}/n/{big}").get_data(as_text=True)
+    assert "Secret lamp" in box_page and "Edit this box" not in box_page and "Add items" not in box_page and "Delete this box" not in box_page
+    lamp = next(n["id"] for n in fake.tables["nodes"] if n["name"] == "Secret lamp")
+    item_page = owner.get(f"/trips/{tid}/n/{lamp}").get_data(as_text=True)
+    assert "Secret lamp" in item_page and "Delete this item" not in item_page
+    lock(owner, tid, on=False)
+    assert not fake.tables["trips"][0]["locked_at"]
+    assert "Add your items" in owner.get(f"/trips/{tid}").get_data(as_text=True)
+
+
+def test_a_locked_trip_refuses_every_change_even_if_someone_sends_it_directly(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    lamp = next(n for n in fake.tables["nodes"] if n["name"] == "Secret lamp")
+    before = [dict(n) for n in fake.tables["nodes"]]
+    lock(owner, tid)
+    photo = (io.BytesIO(photo_with_gps()), "p.jpg")
+    assert post(owner, f"/trips/{tid}/add", {"name": "Sneaky", "kind": "item"}).status_code == 302
+    assert post(owner, f"/trips/{tid}/add/storage", {"name": "Sneaky box"}).status_code == 302
+    assert owner.get(f"/trips/{tid}/add").status_code == 302 and owner.get(f"/trips/{tid}/add/items").status_code == 302
+    assert owner.get(f"/trips/{tid}/n/{lamp['id']}/edit").status_code == 302
+    assert post(owner, f"/trips/{tid}/n/{lamp['id']}/edit", {"name": "Renamed"}).status_code == 302
+    assert post(owner, f"/trips/{tid}/n/{lamp['id']}/delete").status_code == 302
+    assert post(owner, f"/trips/{tid}/rename", {"name": "New name"}).status_code == 302
+    assert post(owner, f"/trips/{tid}/n/{lamp['id']}/move", {"parent_id": big}).status_code == 409
+    r = owner.post(f"/trips/{tid}/capture-one", data={"csrf": csrf(owner), "photo": photo}, content_type="multipart/form-data")
+    assert r.status_code == 409
+    r = owner.post(f"/trips/{tid}/capture", data={"csrf": csrf(owner), "parent_id": "", "photos": [(io.BytesIO(photo_with_gps()), "p.jpg")]}, content_type="multipart/form-data")
+    assert r.status_code == 302
+    assert fake.tables["nodes"] == before and fake.tables["trips"][0]["name"] == "Move"
+    assert fake.uploads.count(lamp["photo_path"]) == 1                                  # no new photos were stored
+
+
+def test_only_the_owner_can_lock_a_trip(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)
+    stranger = app.test_client()
+    logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
+    assert post(stranger, f"/trips/{tid}/lock", {"lock": "1"}).status_code == 404
+    assert not fake.tables["trips"][0].get("locked_at")
+
+
+def test_all_items_view_lists_everything_wherever_it_is_kept(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None)                  # box "Big box" holds "Secret lamp"
+    add(owner, tid, {"name": "Loose spoon"})
+    by_storage = owner.get(f"/trips/{tid}").get_data(as_text=True)
+    assert "Big box" in by_storage and "Loose spoon" in by_storage and "Secret lamp" not in by_storage
+    everything = owner.get(f"/trips/{tid}?show=all").get_data(as_text=True)
+    assert "Secret lamp" in everything and "Loose spoon" in everything
+    assert "data-drop-box" not in everything                                           # no storage cards in this view
+    assert "data-drop-box" in by_storage
