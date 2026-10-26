@@ -262,3 +262,41 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .hello em{font-style:italic;font-weight:500}
 @keyframes hello{0%{opacity:0;transform:translateY(10px);max-height:0}8%{opacity:1;transform:none;max-height:170px}86%{opacity:1;transform:none;max-height:170px}100%{opacity:0;max-height:0}}
 @media (prefers-reduced-motion: reduce){.hello{animation:none}}
+
+/* liquid-glass screens: log in, sign up, forgot password */
+.wrap{position:relative;z-index:1}
+.stage{position:fixed;inset:0;z-index:-1;overflow:hidden;background:#1d1009}
+.stage-art{position:absolute;width:165%;max-width:none;left:-30%;top:4%;transform:rotate(-7deg);opacity:.9;filter:brightness(.5) saturate(1.1);animation:drift 26s ease-in-out infinite alternate}
+@keyframes drift{to{transform:rotate(-3deg) translate(-4%,3%) scale(1.06)}}
+.orb{position:absolute;border-radius:50%;filter:blur(46px);opacity:.42;animation:orbfloat 16s ease-in-out infinite alternate}
+.o1{width:250px;height:250px;background:#F1C166;left:-70px;top:6%}
+.o2{width:300px;height:300px;background:#A13A1E;right:-90px;top:42%;animation-delay:-5s}
+.o3{width:240px;height:240px;background:#88B8CE;left:18%;bottom:-70px;animation-delay:-9s}
+@keyframes orbfloat{to{transform:translate(34px,-44px) scale(1.18)}}
+.stage::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,7,3,.5),rgba(14,7,3,.78))}
+@media (prefers-reduced-motion: reduce){.stage-art,.orb{animation:none}}
+.glasscard{margin:26px auto 28px;max-width:420px;padding:20px 24px 26px;border-radius:38px;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.28);
+  background:linear-gradient(140deg,rgba(255,255,255,.17),rgba(255,255,255,.05)),rgba(10,5,2,.3);border:1px solid rgba(255,255,255,.4);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.65),inset 0 -1px 0 rgba(255,255,255,.12),0 24px 60px rgba(0,0,0,.4)}
+.gtop{display:flex;justify-content:space-between;font-size:14px;margin-bottom:26px}
+.gtop a{color:#fff}.gtop .gbrand{font-weight:500}
+.gh{font-size:34px;line-height:1.12;margin:0 0 8px;font-weight:400;color:#fff}
+.gh b{font-weight:600}
+.gsub{margin:0 0 20px;color:rgba(255,255,255,.88);font-size:15px}
+.gform{display:flex;flex-direction:column;gap:12px;margin-top:18px}
+.glasscard input:not([type=checkbox]):not([type=radio]){background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.26);color:#fff;border-radius:14px;padding:15px 16px;width:100%;font-size:16px}
+.glasscard input::placeholder{color:rgba(255,255,255,.82)}
+.glasscard input:focus{outline:2px solid rgba(255,255,255,.7);outline-offset:1px}
+.glasscard .pwtoggle{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.4);color:#fff}
+.grow{display:flex;justify-content:space-between;font-size:13px;margin-top:-2px}
+.glasscard a{color:#fff;text-decoration:underline;text-underline-offset:2px}
+.gcheck{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:#fff}
+.gcheck input{width:auto;margin-top:3px}
+.glassbtn{display:block;align-self:center;min-width:210px;margin-top:14px;padding:13px 30px;border-radius:999px;border:1.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.08);color:#fff;font:500 16px var(--font);cursor:pointer;text-shadow:none}
+.glassbtn:hover{background:rgba(255,255,255,.22)}
+.gfoot{text-align:center;margin:18px 0 0;font-size:14px;color:#fff}
+.glasscard .gtop a{text-decoration:none}
+
+.glasscard .pwwrap input{padding-right:84px}
+.glasscard input::placeholder{color:rgba(255,255,255,.7)}

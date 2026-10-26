@@ -1,13 +1,15 @@
-{% extends "auth/base.html" %}
+{% extends "auth/glass.html" %}
 {% block title %}Log in · Unbox{% endblock %}
-{% block content %}
-<h1>Log in</h1>
-<form method="post" class="glass addbox" style="margin-top:14px">
+{% block glass %}
+<h1 class="gh"><b>Hello!</b><br>Good to see you</h1>
+<p class="gsub">Log in to your account.</p>
+<form method="post" class="gform">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   <input type="hidden" name="next" value="{{ next }}">
-  <label>Email <input type="email" name="email" value="{{ email }}" required autocomplete="email" autocapitalize="none"></label>
-  <label>Password <input type="password" name="password" required autocomplete="current-password"></label>
-  <button class="primary" type="submit">Log in</button>
+  <input type="email" name="email" value="{{ email }}" placeholder="E-mail address" aria-label="E-mail address" required autocomplete="email" autocapitalize="none">
+  <input type="password" name="password" placeholder="Password" aria-label="Password" required autocomplete="current-password">
+  <div class="grow"><span></span><a href="{{ url_for('forgot') }}">Forgot password</a></div>
+  <button class="glassbtn" type="submit">Log in</button>
 </form>
-<p class="muted"><a href="{{ url_for('forgot') }}">Forgot your password?</a> · <a href="{{ url_for('signup') }}">Create an account</a></p>
+<p class="gfoot">Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a></p>
 {% endblock %}

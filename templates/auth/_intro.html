@@ -1,0 +1,59 @@
+{% set mark %}<span class="mark"><img src="{{ url_for('static', filename='icons/icon-192.png') }}" alt="">Unbox</span>{% endset %}
+<div class="intro">
+  <div class="track" id="intro-track">
+
+    <section class="icard c1" aria-label="Packing, simplified">
+      <h1>Packing,<br>simplified</h1>
+      <img class="art" src="{{ url_for('static', filename='intro/art1.svg') }}" alt="">
+      <div class="foot">{{ mark }}</div>
+      <p class="cap capfoot">Photograph what you pack. Unbox suggests a name for each photo, so you only fix the few it gets wrong.</p>
+    </section>
+
+    <section class="icard c2" aria-label="Everything in its place">
+      <p class="cap">Group items into boxes, bags or drawers. Press and hold an item, then drop it on a storage to move it.</p>
+      <div class="rule"></div>
+      <img class="art" src="{{ url_for('static', filename='intro/art2.svg') }}" alt="">
+      <h1>Everything<br>in its place</h1>
+    </section>
+
+    <section class="icard c3" aria-label="Scan a box, see what's inside">
+      <h1>Scan a box,<br>see what's inside</h1>
+      <img class="art" src="{{ url_for('static', filename='intro/art3.svg') }}" alt="">
+      <div class="foot">{{ mark }}<div class="rule"></div></div>
+      <p class="cap capfoot">Print a QR label for each box. Whoever scans it only needs the viewer password you share. No account needed.</p>
+    </section>
+
+    <section class="icard c4" aria-label="Done? Lock it">
+      <p class="cap">Lock the trip for a clean, view-only look. Unlock it any time to change things.</p>
+      <div class="rule"></div>
+      <img class="art" src="{{ url_for('static', filename='intro/art4.svg') }}" alt="">
+      <h1>Done?<br>Lock it</h1>
+    </section>
+
+  </div>
+  <div class="dots" id="intro-dots"><span class="on"></span><span></span><span></span><span></span></div>
+  <p style="text-align:center;margin-top:16px"><button type="button" class="primary-link" id="intro-next" style="border:0;width:100%;cursor:pointer">Next</button></p>
+  <p style="text-align:center;margin-top:10px"><button class="chip" type="button" id="intro-hide"></button></p>
+</div>
+<script>
+(function () {
+  var track = document.getElementById('intro-track'), dots = document.querySelectorAll('#intro-dots span'), next = document.getElementById('intro-next');
+  var n = dots.length, startUrl = {{ go|tojson }}, hide = document.getElementById('intro-hide'), KEY = 'unbox-no-intro', isPublic = {{ 'true' if public else 'false' }};
+  function at() { return Math.max(0, Math.min(n - 1, Math.round(track.scrollLeft / track.clientWidth))); }
+  function mark() { var i = at(); dots.forEach(function (d, k) { d.classList.toggle('on', k === i); }); next.textContent = i === n - 1 ? (isPublic ? 'Log in' : 'Get started') : 'Next'; }
+  function hidden() { try { return !!localStorage.getItem(KEY); } catch (e) { return false; } }
+  function label() { hide.textContent = hidden() ? 'Show this when I open the app' : "Don't show this again"; }
+  track.addEventListener('scroll', function () { window.requestAnimationFrame(mark); });
+  next.addEventListener('click', function () {
+    var i = at(); if (i >= n - 1) { location.href = startUrl; return; }
+    var target = (i + 1) * track.clientWidth;
+    track.scrollTo({ left: target, behavior: 'smooth' });
+    setTimeout(function () { if (at() === i) { track.scrollLeft = target; mark(); } }, 700);   // if the animation didn't run, just move
+  });
+  hide.addEventListener('click', function () {
+    try { if (hidden()) { localStorage.removeItem(KEY); } else { localStorage.setItem(KEY, '1'); if (isPublic) { location.href = startUrl; return; } } } catch (e) {}
+    label();
+  });
+  label(); mark();
+})();
+</script>

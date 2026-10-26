@@ -1429,39 +1429,31 @@ def test_label_qr_scales_as_a_whole_picture_and_is_never_cropped(fake, app):
     assert "viewBox=" in svg and ' width=' not in svg.split(">")[0] and ' height=' not in svg.split(">")[0]
 
 
-def test_the_introduction_shows_at_every_login_until_the_person_hides_it(client, fake):
+def test_visitors_see_the_instructions_first_and_then_the_login(client, fake):
+    page = client.get("/").get_data(as_text=True)
+    assert "simplified" in page and "in its place" in page and "Don&#39;t show this again" not in page   # the button text is filled in by the page script
+    assert "unbox-no-intro" in page and 'href="/login"' in page                  # Skip / Log in lead to the login; a device can opt out of the cards
+    login_page = client.get("/login").get_data(as_text=True)
+    assert "Hello!" in login_page and "Good to see you" in login_page and 'placeholder="E-mail address"' in login_page
+    assert "stage-art" in login_page and "glasscard" in login_page
     make_user(fake)
-    for _ in range(3):                                                           # every login, not just the first
-        r = login(client, "a@example.com")
-        assert r.status_code == 302 and "/welcome" in r.headers["Location"] and "next=" in r.headers["Location"]
-        client.post("/logout", data={"csrf": csrf(client, "/welcome")})
-    login(client, "a@example.com")
-    page = client.get("/welcome?next=/trips").get_data(as_text=True)
-    assert "Don&#39;t show this again" in page or "Don't show this again" in page
-    r = post(client, "/welcome/hide", {"hide": "1", "next": "/trips"})
-    assert r.status_code == 302 and fake.users["a@example.com"]["meta"]["hide_intro"] is True
-    client.post("/logout", data={"csrf": csrf(client, "/trips")})
-    r = login(client, "a@example.com")
-    assert r.headers["Location"].endswith("/trips")                              # hidden: straight to the trips
-    assert "Show this when I log in" in client.get("/welcome").get_data(as_text=True)    # still readable from Instructions
-    post(client, "/welcome/hide", {"hide": "0"})
-    client.post("/logout", data={"csrf": csrf(client, "/trips")})
-    assert "/welcome" in login(client, "a@example.com").headers["Location"]      # and it can be turned back on
+    r = login(client, "a@example.com")                                          # the first login of a new account: the cards once
+    assert "/welcome" in r.headers["Location"]
+    client.post("/logout", data={"csrf": csrf(client, "/welcome")})
+    assert login(client, "a@example.com").headers["Location"].endswith("/trips")    # after that, straight to the trips
+    assert client.get("/").status_code == 302                                    # logged in: "/" is your trips
+    assert "simplified" in client.get("/welcome").get_data(as_text=True)         # Profile -> Instructions
 
 
-def test_the_introduction_carries_on_to_the_page_the_person_wanted(client, fake):
+def test_the_first_login_carries_on_to_the_page_the_person_wanted(client, fake):
     make_user(fake)
     r = post(client, "/login?next=/trips/abc", {"email": "a@example.com", "password": GOOD_PW, "next": "/trips/abc"})
     assert "/welcome" in r.headers["Location"] and "/trips/abc" in r.headers["Location"]
     assert "/trips/abc" in client.get("/welcome?next=/trips/abc").get_data(as_text=True)
     assert "evil.com" not in client.get("/welcome?next=https://evil.com").get_data(as_text=True)    # no open redirect
-    assert post(client, "/welcome/hide", {"hide": "1", "next": "https://evil.com"}).headers["Location"].endswith("/trips")
-    assert app_logged_out(client)
-
-
-def app_logged_out(client):
     anon = client.application.test_client()
-    return anon.post("/welcome/hide", data={"hide": "1"}).status_code in (302, 400)
+    assert anon.get("/welcome").status_code == 302                               # the logged-in copy needs a login
+
 
 
 
@@ -1569,7 +1561,7 @@ def test_doodles_loading_screen_and_the_removed_open_label(fake, app, client):
     for name in ("box", "camera", "lock"):
         r = client.get(f"/static/doodles/{name}.svg")
         assert r.status_code == 200 and b"prefers-reduced-motion" in r.data         # animated, but still for people who turn motion off
-    assert "doodles/box.svg" in client.get("/").get_data(as_text=True)              # and on the landing page
+    assert "simplified" in client.get("/").get_data(as_text=True)                   # the home page for visitors is the instructions
     assert 'class="glass addbox slow"' in owner.get("/account/delete").get_data(as_text=True)
 
 

@@ -91,7 +91,7 @@ The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
 - [x] A viewer password per trip, so the QR itself carries no secret
 - [x] QR labels generated in-app
 - [x] Installable on a phone's home screen (web app manifest, icons, a do-nothing service worker that stores no private data)
-- [x] A short introduction shown at every login until the person taps "Don't show this again" (saved with the account; always available under Profile → Instructions)
+- [x] The home page for visitors is the four instruction cards (Skip, or "Don't show this again" on that device), then a liquid-glass login ("Hello! Good to see you") over a soft, moving background; a brand-new account sees the cards once after confirming its email; Profile → Instructions shows them again
 - [x] Location data stripped from every uploaded photo
 - [x] Search inside a trip (by meaning, words and typos)
 - [x] Editing boxes and items (rename, tags, weight, replace or remove the photo, move between boxes) and renaming trips

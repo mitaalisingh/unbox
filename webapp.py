@@ -159,7 +159,8 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
 
     @app.context_processor
     def inject():
-        return {"csrf_token": csrf_token, "logged_in": bool(session.get("at")), "user_email": session.get("email", "")}
+        return {"csrf_token": csrf_token, "logged_in": bool(session.get("at")), "user_email": session.get("email", ""),
+                "stage_art": secrets.randbelow(30) + 1}          # which illustration glows behind the login screens
 
     def callback_url():
         return request.url_root.rstrip("/") + url_for("auth_callback")
@@ -185,22 +186,27 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         start_session(tokens)
         user = current_user()
         meta = (client.get_user(user["token"]) or {}).get("user_metadata") or {}
+        brand_new = False
         if not has_profile(user):
             if meta.get("confirmed_18_plus") and meta.get("accepted_terms_at"):
                 create_profile_from_metadata(user, meta)
+                brand_new = True
             else:
                 return redirect(url_for("consent"))
         session["name"] = first_name(meta, user["email"])
         session["greet"] = True                                  # the "Hey <name>" greeting shows once per login
         target = safe_next(nxt, url_for("trips"))
-        if not meta.get("hide_intro"):                           # the introduction shows at every login until someone hides it
+        if brand_new:                                            # a first visit on this phone may not have seen the instructions yet
             return redirect(url_for("welcome", next=target))
         return redirect(target)
 
     # ---------------- public pages ----------------
     @app.route("/")
     def home():
-        return redirect(url_for("trips")) if session.get("at") else render_template("auth/landing.html")
+        """Logged in: your trips. Otherwise the short instructions first, then the login."""
+        if session.get("at"):
+            return redirect(url_for("trips"))
+        return render_template("auth/intro_public.html", go=url_for("login"))
 
     @app.route("/manifest.webmanifest")
     def manifest():
@@ -217,23 +223,8 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     @app.route("/welcome")
     @login_required
     def welcome():
-        try:
-            hidden = bool(((client.get_user(request.user["token"]) or {}).get("user_metadata") or {}).get("hide_intro"))
-        except SupabaseError:
-            hidden = False
-        return render_template("auth/welcome.html", hidden=hidden, go=safe_next(request.args.get("next"), url_for("trips")))
-
-    @app.route("/welcome/hide", methods=["POST"])
-    @login_required
-    def welcome_hide():
-        """'Don't show this again' (or turn it back on): saved with the account, so it follows the person to any device."""
-        hide = request.form.get("hide") == "1"
-        try:
-            client.set_metadata(request.user["token"], {"hide_intro": hide})
-            flash("Okay. You won't see the introduction when you log in." if hide else "Okay. You'll see the introduction when you log in.")
-        except SupabaseError:
-            flash("Couldn't save that. Please try again.")
-        return redirect(safe_next(request.form.get("next"), url_for("trips")))
+        """The instructions again (Profile -> Instructions), and the one-time look for a brand-new account."""
+        return render_template("auth/welcome.html", go=safe_next(request.args.get("next"), url_for("trips")))
 
     @app.route("/privacy")
     def privacy():

@@ -1,0 +1,7 @@
+{% extends "auth/base.html" %}
+{% block title %}Unbox{% endblock %}
+{% block topbar %}<header class="topbar"><span class="brand">Unbox</span><a class="back" href="{{ go }}">Skip</a></header>{% endblock %}
+{% block content %}
+<script>try { if (localStorage.getItem('unbox-no-intro')) { location.replace({{ go|tojson }}); } } catch (e) {}</script>
+{% set public = true %}{% include "auth/_intro.html" %}
+{% endblock %}
