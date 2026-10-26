@@ -239,19 +239,20 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .tip span{display:block;color:#5ba39a;text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px}
 .tip b{font-weight:400;transition:opacity .25s}
 
-/* trip cards: a cream card with a picture tile that swaps sides, on black */
-.tripcard{position:relative;display:flex;align-items:stretch;gap:14px;padding:12px;border-radius:34px;background:#f0ede4;color:#161512;min-height:150px;list-style:none}
+/* trip cards: translucent glass cards with a picture tile that swaps sides, on black */
+.tripcard{position:relative;display:flex;align-items:stretch;gap:14px;padding:12px;border-radius:34px;list-style:none;min-height:150px;color:var(--ink);
+  background:rgba(240,237,228,.09);border:1px solid rgba(240,237,228,.16);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .tripcard.flip{flex-direction:row-reverse}
 .tripimg{flex:0 0 46%;aspect-ratio:1.18;border-radius:26px;overflow:hidden;display:block;align-self:center}
 .tripimg img{width:100%;height:100%;object-fit:cover;display:block}
 .tripcard .txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:12px 6px 6px;color:inherit}
-.tripcard .txt strong{font-weight:500;font-size:21px;line-height:1.15;color:#111;overflow-wrap:anywhere;margin-right:36px}
-.tripcard.flip .txt strong{margin-right:0;margin-left:36px}
-.tripcard .txt small{color:#6e6a5e;font-size:13px;margin-top:18px}
-.tripcard .more{top:16px;right:18px}
-.tripcard.flip .more{right:auto;left:18px}
-.tripcard.flip .more .menu{right:auto;left:0}
-.tripcard .more > summary{background:#161512;border-color:#161512;color:#fff}
+.tripcard .txt strong{font-weight:500;font-size:21px;line-height:1.15;color:#fff;overflow-wrap:break-word;hyphens:auto}
+.tripcard .txt small{color:var(--muted);font-size:13px;margin-top:18px}
+.tripcard .more{top:22px;left:22px;right:auto}
+.tripcard.flip .more{left:auto;right:22px}
+.tripcard .more .menu{left:0;right:auto}
+.tripcard.flip .more .menu{left:auto;right:0}
+.tripcard .more > summary{background:rgba(0,0,0,.55);border-color:rgba(255,255,255,.22);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 .hello{overflow:hidden;animation:hello 5s ease forwards}
 .hello h1{font-size:40px;line-height:1.08;margin:6px 0 10px}
 .hello em{font-style:italic;font-weight:500}
