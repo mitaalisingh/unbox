@@ -257,20 +257,26 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .picker button{padding:0;border:2px solid transparent;border-radius:14px;overflow:hidden;background:none;cursor:pointer;display:block;aspect-ratio:1.4}
 .picker button.on{border-color:var(--paper)}
 .picker img{width:100%;height:100%;object-fit:cover;display:block}
-.hello{overflow:hidden;animation:hello 5s ease forwards}
+.hello{overflow:hidden;animation:hello 10s ease forwards}
 .hello h1{font-size:40px;line-height:1.08;margin:6px 0 10px}
 .hello em{font-style:italic;font-weight:500}
-@keyframes hello{0%{opacity:0;transform:translateY(10px);max-height:0}8%{opacity:1;transform:none;max-height:170px}86%{opacity:1;transform:none;max-height:170px}100%{opacity:0;max-height:0}}
+@keyframes hello{0%{opacity:0;transform:translateY(10px);max-height:0}4%{opacity:1;transform:none;max-height:170px}93%{opacity:1;transform:none;max-height:170px}100%{opacity:0;max-height:0}}
 @media (prefers-reduced-motion: reduce){.hello{animation:none}}
 
 /* liquid-glass screens: log in, sign up, forgot password */
 .wrap{position:relative;z-index:1}
 .stage{position:fixed;inset:0;z-index:-1;overflow:hidden;background:#000}
-.stage-photo{position:absolute;left:0;bottom:0;width:100%;height:84vh;object-fit:cover;object-position:60% 100%;
-  -webkit-mask-image:linear-gradient(to bottom,transparent 0%,rgba(0,0,0,.25) 26%,rgba(0,0,0,.8) 52%,#000 66%);mask-image:linear-gradient(to bottom,transparent 0%,rgba(0,0,0,.25) 26%,rgba(0,0,0,.8) 52%,#000 66%);
-  animation:slowzoom 30s ease-in-out infinite alternate;transform-origin:60% 100%}
-@keyframes slowzoom{to{transform:scale(1.08)}}
-@media (prefers-reduced-motion: reduce){.stage-photo{animation:none}}
+.stage-doodles svg{position:absolute;inset:0;width:100%;height:100%}
+.dd{transform-box:fill-box;transform-origin:center}
+.spin{animation:spin 60s linear infinite}.spin.slow{animation-duration:90s;animation-direction:reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.breathe{animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.floaty{animation:floaty 7s ease-in-out infinite alternate}.f1{animation-delay:-2s}.f2{animation-delay:-4s;animation-duration:9s}.f3{animation-delay:-1s;animation-duration:8s}
+@keyframes floaty{from{transform:translate(0,0) rotate(0)}to{transform:translate(8px,-18px) rotate(10deg)}}
+.twinkle{animation:twinkle 3.4s ease-in-out infinite}.t2{animation-delay:-1.2s}.t3{animation-delay:-2.2s}
+@keyframes twinkle{0%,100%{opacity:.12;transform:scale(.7)}50%{opacity:.7;transform:scale(1)}}
+@media (prefers-reduced-motion: reduce){.dd{animation:none!important}}
 .glasscard{margin:22px auto 28px;max-width:350px;padding:16px 20px 20px;border-radius:32px;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.28);
   background:linear-gradient(140deg,rgba(255,255,255,.2),rgba(255,255,255,.05)),rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.42);
   -webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);
@@ -296,3 +302,15 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 
 .glasscard .pwwrap input{padding-right:84px}
 .glasscard input::placeholder{color:rgba(255,255,255,.7)}
+
+/* the truck and the boxes on the login screens: the truck rolls in, three boxes drop into it, it drives away (14 s loop) */
+.rig{animation:rig 14s linear infinite}
+@keyframes rig{0%{transform:translateX(-200px)}14%{transform:translateX(120px);animation-timing-function:ease-out}62%{transform:translateX(120px);animation-timing-function:ease-in}90%,100%{transform:translateX(520px)}}
+.wheel{transform-box:fill-box;transform-origin:center;animation:wheelspin 14s linear infinite}
+@keyframes wheelspin{0%{transform:rotate(0)}14%{transform:rotate(700deg)}62%{transform:rotate(700deg)}90%,100%{transform:rotate(1900deg)}}
+.drop{opacity:0;animation:drop1 14s linear infinite}
+.drop.d2{animation-name:drop2}.drop.d3{animation-name:drop3}
+@keyframes drop1{0%,17.9%{opacity:0;transform:translateY(-440px)}18%{opacity:1;transform:translateY(-440px);animation-timing-function:cubic-bezier(.5,0,.9,.6)}25%{transform:translateY(0)}26.5%{transform:translateY(-8px)}28%,100%{opacity:1;transform:translateY(0)}}
+@keyframes drop2{0%,29.9%{opacity:0;transform:translateY(-440px)}30%{opacity:1;transform:translateY(-440px);animation-timing-function:cubic-bezier(.5,0,.9,.6)}37%{transform:translateY(0)}38.5%{transform:translateY(-8px)}40%,100%{opacity:1;transform:translateY(0)}}
+@keyframes drop3{0%,41.9%{opacity:0;transform:translateY(-440px)}42%{opacity:1;transform:translateY(-440px);animation-timing-function:cubic-bezier(.5,0,.9,.6)}49%{transform:translateY(0)}50.5%{transform:translateY(-8px)}52%,100%{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion: reduce){.rig,.wheel,.drop{animation:none!important}.rig{transform:translateX(120px)}.drop{opacity:1}}

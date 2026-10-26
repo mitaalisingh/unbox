@@ -1,8 +1,25 @@
 {% extends "auth/base.html" %}
 {% block topbar %}{% endblock %}
 {% block content %}
-<div class="stage" aria-hidden="true">
-  <img class="stage-photo" src="{{ url_for('static', filename='login-fruit.jpg') }}" alt="" onerror="this.remove()">
+<div class="stage stage-doodles" aria-hidden="true">
+  <svg viewBox="0 0 375 812" preserveAspectRatio="xMidYMid slice" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M0 748 H375" stroke-dasharray="14 12" opacity=".4"/>
+    <path d="M0 770 H375" opacity=".16"/>
+    <g style="transform:translateY(738px)" opacity=".9">
+      <g class="rig">
+        <path d="M0 -36 V0 H98 V-36"/>
+        <path d="M98 -48 h30 q10 0 18 12 l12 22 v14 h-60z"/><path d="M110 -40 h16 q6 0 11 8 l7 12 h-34z"/>
+        <g class="wheel"><circle cx="30" cy="6" r="15"/><path d="M30 -9 v30 M15 6 h30"/></g>
+        <g class="wheel"><circle cx="122" cy="6" r="15"/><path d="M122 -9 v30 M107 6 h30"/></g>
+        <g class="drop d1"><path d="M24.0 -32.0 L37.9 -24.0 L37.9 -8.0 L24.0 0.0 L10.1 -8.0 L10.1 -24.0Z M24.0 -16.0 V0.0 M24.0 -16.0 L10.1 -24.0 M24.0 -16.0 L37.9 -24.0 M17.1 -28.0 L30.9 -20.0"/></g>
+        <g class="drop d2"><path d="M60.0 -32.0 L73.9 -24.0 L73.9 -8.0 L60.0 0.0 L46.1 -8.0 L46.1 -24.0Z M60.0 -16.0 V0.0 M60.0 -16.0 L46.1 -24.0 M60.0 -16.0 L73.9 -24.0 M53.1 -28.0 L66.9 -20.0"/></g>
+        <g class="drop d3"><path d="M42.0 -60.0 L55.9 -52.0 L55.9 -36.0 L42.0 -28.0 L28.1 -36.0 L28.1 -52.0Z M42.0 -44.0 V-28.0 M42.0 -44.0 L28.1 -52.0 M42.0 -44.0 L55.9 -52.0 M35.1 -56.0 L48.9 -48.0"/></g>
+      </g>
+    </g>
+    <g class="dd twinkle t1"><path d="M40 120 v28 M26 134 h28"/></g>
+    <g class="dd twinkle t2"><path d="M346 480 v26 M333 493 h26"/></g>
+    <g class="dd twinkle t3"><path d="M120 640 v22 M109 651 h22"/></g>
+  </svg>
 </div>
 <div class="glasscard">
   <div class="gtop"><a class="gbrand" href="{{ url_for('home') }}">Unbox</a><a href="{{ url_for('home') }}">Instructions</a></div>
