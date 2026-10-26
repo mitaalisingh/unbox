@@ -172,6 +172,14 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             "user_id": user["id"], "display_name": meta.get("display_name"),
             "accepted_terms_at": meta["accepted_terms_at"], "confirmed_18_plus": True})
 
+    def first_name(meta, email):
+        """What to call someone: the name they gave, or the first word of their email address (mitaali.singh255@... -> Mitaali)."""
+        given = " ".join(str((meta or {}).get("display_name") or "").split())[:40]
+        if given:
+            return given.split(" ")[0]
+        word = re.match(r"[A-Za-z]+", (email or "").split("@")[0])
+        return word.group(0).capitalize() if word else ""
+
     def after_login(tokens, nxt=None):
         """Log in, make sure a consent record exists, then go on."""
         start_session(tokens)
@@ -182,6 +190,8 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
                 create_profile_from_metadata(user, meta)
             else:
                 return redirect(url_for("consent"))
+        session["name"] = first_name(meta, user["email"])
+        session["greet"] = True                                  # the "Hey <name>" greeting shows once per login
         target = safe_next(nxt, url_for("trips"))
         if not meta.get("hide_intro"):                           # the introduction shows at every login until someone hides it
             return redirect(url_for("welcome", next=target))
@@ -273,6 +283,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
                 flash(problem)
                 return render_template("auth/signup.html", email=email, invite_required=bool(invite_codes())), 400
             meta = {"confirmed_18_plus": True, "accepted_terms_at": datetime.now(timezone.utc).isoformat()}
+            who = " ".join(request.form.get("name", "").split())[:40]
+            if who:
+                meta["display_name"] = who
             try:
                 client.sign_up(email, pw, meta, redirect_to=callback_url())
             except SupabaseError as e:
@@ -342,7 +355,23 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     @app.route("/account")
     @login_required
     def account():
-        return render_template("auth/account.html")
+        try:
+            who = ((client.get_user(request.user["token"]) or {}).get("user_metadata") or {}).get("display_name") or ""
+        except SupabaseError:
+            who = ""
+        return render_template("auth/account.html", who=who)
+
+    @app.route("/account/name", methods=["POST"])
+    @login_required
+    def change_name():
+        who = " ".join(request.form.get("name", "").split())[:40]
+        try:
+            client.set_metadata(request.user["token"], {"display_name": who})
+            session["name"] = first_name({"display_name": who}, request.user["email"])
+            flash("Saved.")
+        except SupabaseError:
+            flash("Couldn't save that. Please try again.")
+        return redirect(url_for("account"))
 
     @app.route("/account/delete", methods=["GET", "POST"])
     @login_required
@@ -409,6 +438,22 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         except ValueError:
             abort(404)
 
+    TRIP_PICTURES = 20
+
+    def trip_pictures(rows):
+        """A different picture for each of someone's trips, picked from 20 ready-made ones. It depends only on the trip,
+        so a trip keeps its picture; trips are given one at a time, oldest first, so two trips never share one."""
+        taken, out, previous = set(), {}, None
+        for r in sorted(rows, key=lambda r: (str(r.get("created_at")), r["id"])):
+            n = int(hashlib.sha1(r["id"].encode()).hexdigest(), 16) % TRIP_PICTURES
+            order = [(n + step) % TRIP_PICTURES for step in range(TRIP_PICTURES)]
+            free = [x for x in order if x not in taken] or order
+            pick = next((x for x in free if x % 5 != previous), free[0])      # not the same kind of scene as the trip before it
+            taken.add(pick)
+            previous = pick % 5
+            out[r["id"]] = f"trips/trip-{pick + 1:02d}.svg"
+        return out
+
     @app.route("/trips", methods=["GET", "POST"])
     @login_required
     def trips():
@@ -422,8 +467,10 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
                 flash(f"Trip “{name}” created.")
             return redirect(url_for("trips"))
         rows = client.select("trips", user["token"], {"select": "id,name,archived_at,created_at", "order": "created_at.desc"})
+        hello = session.pop("greet", False)
         return render_template("auth/trips.html", active=[r for r in rows if not r.get("archived_at")],
-                               archived=[r for r in rows if r.get("archived_at")])
+                               archived=[r for r in rows if r.get("archived_at")], art=trip_pictures(rows),
+                               hello=session.get("name") if hello else None)
 
     @app.route("/trips/<tid>/archive", methods=["POST"])
     @login_required

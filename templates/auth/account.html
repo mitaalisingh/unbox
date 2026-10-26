@@ -4,6 +4,11 @@
 <div class="chips"><a class="chip" href="{{ url_for('trips') }}">Trips</a></div>
 <h1>Your profile</h1>
 <p class="lead">{{ user_email }}</p>
+<form method="post" action="{{ url_for('change_name') }}" class="glass addbox" style="margin-top:14px">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <label>Your name <input name="name" value="{{ who }}" maxlength="40" placeholder="So we can greet you" autocomplete="given-name"></label>
+  <button class="primary compact" type="submit">Save</button>
+</form>
 <ul class="stack">
   <li><a class="glass boxcard" href="{{ url_for('change_password') }}" style="min-height:64px"><span class="txt"><strong>Change password</strong></span>
     <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></a></li>

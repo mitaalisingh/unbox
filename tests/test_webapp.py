@@ -1581,3 +1581,61 @@ def test_a_rejected_login_token_sends_the_person_to_log_in_instead_of_an_error_p
     r = client.get("/trips")
     assert r.status_code == 302 and "/login" in r.headers["Location"]
     assert client.get("/trips").status_code == 302                         # and they are logged out
+
+
+# ================= trip pictures, the greeting, and names =================
+def test_every_trip_gets_its_own_picture_and_keeps_it(fake, app, client):
+    owner = app.test_client()
+    make_user(fake)
+    login(owner, "a@example.com")
+    for i in range(12):
+        post(owner, "/trips", {"name": f"Trip {i}"})
+        fake.tables["trips"][-1]["created_at"] = f"2026-10-24T10:00:{i:02d}+00:00"       # one after another
+    page = owner.get("/trips").get_data(as_text=True)
+    used = _re.findall(r"static/trips/(trip-\d\d\.svg)", page)
+    assert len(used) == 12 and len(set(used)) == 12                                  # no two trips share a picture
+    scenes = [(int(u[5:7]) - 1) % 5 for u in used]                                    # the fake lists oldest first
+    assert all(a != b for a, b in zip(scenes, scenes[1:]))                           # neighbours are never the same kind of scene
+    assert used == _re.findall(r"static/trips/(trip-\d\d\.svg)", owner.get("/trips").get_data(as_text=True))     # and they are stable
+    for i in range(1, 21):
+        assert client.get(f"/static/trips/trip-{i:02d}.svg").status_code == 200
+
+
+def test_twenty_one_trips_still_all_get_a_picture(fake, app):
+    owner = app.test_client()
+    make_user(fake)
+    login(owner, "a@example.com")
+    for i in range(21):
+        post(owner, "/trips", {"name": f"T{i}"})
+    page = owner.get("/trips").get_data(as_text=True)
+    assert len(_re.findall(r"static/trips/trip-\d\d\.svg", page)) == 21
+
+
+def test_the_greeting_uses_the_name_and_shows_once_per_login(client, fake):
+    make_user(fake, "mitaali.singh255@example.com")
+    login(client, "mitaali.singh255@example.com")
+    first = client.get("/trips").get_data(as_text=True)
+    assert 'id="hello"' in first and "<em>Mitaali</em>" in first                    # no name given: the first word of the email
+    assert 'id="hello"' not in client.get("/trips").get_data(as_text=True)          # not again until the next login
+    client.post("/logout", data={"csrf": csrf(client, "/trips")})
+    login(client, "mitaali.singh255@example.com")
+    assert 'id="hello"' in client.get("/trips").get_data(as_text=True)
+
+
+def test_a_name_given_at_signup_or_in_the_profile_is_used(client, fake):
+    r = post(client, "/signup", {"email": "x9@example.com", "password": GOOD_PW, "password2": GOOD_PW, "age18": "on", "terms": "on", "name": "  Rahul   Sharma "})
+    assert fake.signup_calls[-1]["metadata"]["display_name"] == "Rahul Sharma"
+    fake.users["x9@example.com"]["confirmed"] = True
+    login(client, "x9@example.com")
+    assert "<em>Rahul</em>" in client.get("/trips").get_data(as_text=True)
+    assert 'value="Rahul Sharma"' in client.get("/account").get_data(as_text=True)
+    post(client, "/account/name", {"name": "Raj"})
+    assert fake.users["x9@example.com"]["meta"]["display_name"] == "Raj"
+    client.post("/logout", data={"csrf": csrf(client, "/trips")})
+    login(client, "x9@example.com")
+    assert "<em>Raj</em>" in client.get("/trips").get_data(as_text=True)
+    assert post(app_anon(client), "/account/name", {"name": "x"}).status_code == 302
+
+
+def app_anon(client):
+    return client.application.test_client()
