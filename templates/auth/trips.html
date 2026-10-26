@@ -10,11 +10,12 @@
 <ul class="stack">
 {% for t in active %}
   <li class="tripcard{{ ' flip' if loop.index is even }}">
-    <a class="tripimg" href="{{ url_for('trip_view', tid=t['id']) }}" aria-label="Open {{ t['name'] }}"><img src="{{ url_for('static', filename=art[t['id']]) }}" alt=""></a>
+    <a class="tripimg" href="{{ url_for('trip_view', tid=t['id']) }}" aria-label="Open {{ t['name'] }}"><img src="{{ pic[t['id']] }}" alt=""></a>
     <a class="txt" href="{{ url_for('trip_view', tid=t['id']) }}"><strong>{{ t['name'] }}</strong><small>Created {{ t['created_at'][:10] }}</small></a>
     <details class="more">
       <summary aria-label="More options for {{ t['name'] }}">⋯</summary>
       <div class="menu">
+        <a class="menuitem" href="{{ url_for('trip_settings', tid=t['id'], section='cover') }}">Change picture</a>
         <form method="post" action="{{ url_for('archive_trip', tid=t['id']) }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="menuitem" type="submit">Archive (hide, but keep)</button></form>
         <details class="askfirst">

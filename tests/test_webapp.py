@@ -1639,3 +1639,82 @@ def test_a_name_given_at_signup_or_in_the_profile_is_used(client, fake):
 
 def app_anon(client):
     return client.application.test_client()
+
+
+# ================= choosing or uploading a trip's picture =================
+def post_cover(client, tid, **fields):
+    data = {"csrf": csrf(client), **fields}
+    return client.post(f"/trips/{tid}/cover", data=data, content_type="multipart/form-data")
+
+
+def test_a_trip_can_use_a_chosen_illustration_and_others_avoid_it(fake, app):
+    owner = app.test_client()
+    make_user(fake)
+    login(owner, "a@example.com")
+    for name in ("One", "Two", "Three"):
+        post(owner, "/trips", {"name": name})
+    one = fake.tables["trips"][0]
+    r = post_cover(owner, one["id"], art="7")
+    assert r.status_code == 302 and one["cover"] == "art:7"
+    page = owner.get("/trips").get_data(as_text=True)
+    used = _re.findall(r"static/trips/(trip-\d\d\.svg)", page)
+    assert used.count("trip-07.svg") == 1 and len(set(used)) == 3                    # the others pick something else
+    assert 'class="on"' in owner.get(f"/trips/{one['id']}/settings?section=cover").get_data(as_text=True)
+    assert owner.get(f"/trips/{one['id']}/settings?section=cover").get_data(as_text=True).count('name="art"') == 30
+
+
+def test_a_trip_can_use_the_owners_own_photo_and_it_is_cleaned_and_private(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    r = owner.post(f"/trips/{tid}/cover", data={"csrf": csrf(owner), "photo": (io.BytesIO(photo_with_gps()), "mine.jpg")}, content_type="multipart/form-data")
+    assert r.status_code == 302 and fake.tables["trips"][0]["cover"] == "photo"
+    assert b"Exif" not in fake.storage[f"{tid}/cover.jpg"] and b"SecretPhoneMaker" not in fake.storage[f"{tid}/cover.jpg"]
+    assert f"https://files.example/{tid}/cover.jpg" in owner.get("/trips").get_data(as_text=True)     # shown through a short-lived link
+    post_cover(owner, tid, art="3")                                                  # choosing an illustration drops the uploaded file
+    assert f"{tid}/cover.jpg" not in fake.storage and fake.tables["trips"][0]["cover"] == "art:3"
+    owner.post(f"/trips/{tid}/cover", data={"csrf": csrf(owner), "photo": (io.BytesIO(photo_with_gps()), "mine.jpg")}, content_type="multipart/form-data")
+    post_cover(owner, tid, auto="1")
+    assert fake.tables["trips"][0]["cover"] is None and f"{tid}/cover.jpg" not in fake.storage
+
+
+def test_a_bad_picture_is_refused_and_nothing_changes(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    r = owner.post(f"/trips/{tid}/cover", data={"csrf": csrf(owner), "photo": (io.BytesIO(b"<html>nope</html>"), "x.jpg")}, content_type="multipart/form-data")
+    assert r.status_code == 302 and not fake.tables["trips"][0].get("cover") and f"{tid}/cover.jpg" not in fake.storage
+    post_cover(owner, tid, art="99")
+    post_cover(owner, tid)
+    assert not fake.tables["trips"][0].get("cover")
+
+
+def test_only_the_owner_can_change_a_picture_and_a_locked_trip_keeps_its_own(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    stranger = app.test_client()
+    logged_in_trip(stranger, fake, email="b@example.com", name="Theirs")
+    assert post_cover(stranger, tid, art="2").status_code == 404 and not fake.tables["trips"][0].get("cover")
+    lock(owner, tid)
+    assert post_cover(owner, tid, art="2").status_code == 302 and not fake.tables["trips"][0].get("cover")
+
+
+def test_deleting_a_trip_also_deletes_its_own_picture_file(fake, app):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    owner.post(f"/trips/{tid}/cover", data={"csrf": csrf(owner), "photo": (io.BytesIO(photo_with_gps()), "mine.jpg")}, content_type="multipart/form-data")
+    assert f"{tid}/cover.jpg" in fake.storage
+    post(owner, f"/trips/{tid}/delete", {"sure": "on"})
+    assert f"{tid}/cover.jpg" not in fake.storage
+
+
+def test_trips_still_show_if_the_database_has_no_cover_column_yet(fake, app, monkeypatch):
+    owner = app.test_client()
+    tid = logged_in_trip(owner, fake)
+    real = fake.select
+    from sbclient import SupabaseError
+    def select(table, token, params=None):
+        if table == "trips" and "cover" in (params or {}).get("select", ""):
+            raise SupabaseError("column does not exist", 400)
+        return real(table, token, params)
+    monkeypatch.setattr(fake, "select", select)
+    assert "static/trips/trip-" in owner.get("/trips").get_data(as_text=True)
+    assert owner.get(f"/trips/{tid}").status_code == 200

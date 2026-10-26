@@ -5,7 +5,7 @@
   <a class="chip" href="{{ url_for('trips') }}">Trips</a>
   <a class="chip" href="{{ url_for('trip_view', tid=trip.id) }}">{{ trip.name }}</a>
 </div>
-<h1>{{ {'rename': 'Rename trip', 'copy': 'Share a copy', 'share': 'Share by QR'}[section] }}</h1>
+<h1>{{ {'rename': 'Rename trip', 'copy': 'Share a copy', 'share': 'Share by QR', 'cover': 'Trip picture'}[section] }}</h1>
 {% if section == 'share' %}
 <section class="glass addbox" id="share">
   <h2 style="margin-top:0">Share by QR</h2>
@@ -29,6 +29,22 @@
   </script>
 </section>
 <p><a class="chip solid" href="{{ url_for('labels', tid=trip.id) }}">🏷 Print QR labels</a></p>
+{% elif section == 'cover' %}
+<section class="glass addbox" id="cover">
+  <form method="post" action="{{ url_for('set_cover', tid=trip.id) }}" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label class="primary-link" style="cursor:pointer">Upload your own picture<input type="file" name="photo" accept="image/*" hidden onchange="this.form.submit()"></label>
+  </form>
+  <p class="muted small" style="margin:18px 0 0">Or pick an illustration</p>
+  <form method="post" action="{{ url_for('set_cover', tid=trip.id) }}" class="picker">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    {% for n in range(1, count + 1) %}<button type="submit" name="art" value="{{ n }}" class="{{ 'on' if trip.cover == 'art:' ~ n }}" aria-label="Illustration {{ n }}"><img src="{{ url_for('static', filename='trips/trip-%02d.svg' % n) }}" alt=""></button>{% endfor %}
+  </form>
+  <form method="post" action="{{ url_for('set_cover', tid=trip.id) }}">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <button class="chip" type="submit" name="auto" value="1" style="display:block;margin:14px auto 0">Pick one for me</button>
+  </form>
+</section>
 {% elif section == 'rename' %}
 <section class="glass addbox" id="rename">
   <h2 style="margin-top:0">Rename this trip</h2>

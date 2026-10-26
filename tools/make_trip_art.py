@@ -1,5 +1,5 @@
-"""Draws the 25 pictures used on the trip cards (static/trips/trip-01.svg ... trip-25.svg).
-Five little scenes (boxes, a moving van, luggage, a house, a desk) in five colour sets.
+"""Draws the 30 pictures used on the trip cards (static/trips/trip-01.svg ... trip-30.svg).
+Five little scenes (boxes, a moving van, luggage, a house, a desk) in six colour sets.
 Run:  python tools/make_trip_art.py
 """
 import math
@@ -7,13 +7,14 @@ import os
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "trips")
 K = math.sqrt(3) / 2
-# bg, light, main, second, accent, ink  (earthy set: olive, wine, cocoa, cream, fern, butter, sky, cherry, fawn)
+# bg, light, main, second, accent, ink  (coffee-shop set: espresso, eau trouble, terre cuite, bleu porcelaine, nuage de lait, miel dore)
 PALETTES = [
-    ("#5A5E27", "#EFEFC9", "#640017", "#2F1B1A", "#E0C39D", "#2F1B1A"),     # olive tile, wine things
-    ("#8B1717", "#FFF6BF", "#E0C39D", "#563726", "#B5B478", "#2F1B1A"),     # cherry tile, fawn things
-    ("#B5B478", "#FFF6BF", "#8B1717", "#563726", "#D2E1FF", "#2F1B1A"),     # fern tile, cherry things
-    ("#D2E1FF", "#FFF6BF", "#563726", "#2F1B1A", "#8B1717", "#2F1B1A"),     # sky tile, cocoa things
-    ("#563726", "#EFEFC9", "#B5B478", "#8B1717", "#E0C39D", "#2F1B1A"),     # cocoa tile, fern things
+    ("#542916", "#FEFAF0", "#B79858", "#A13A1E", "#F1C166", "#2E1509"),     # espresso tile
+    ("#B79858", "#FEFAF0", "#A13A1E", "#542916", "#88B8CE", "#2E1509"),     # eau trouble tile
+    ("#A13A1E", "#FEFAF0", "#F1C166", "#542916", "#88B8CE", "#2E1509"),     # terre cuite tile
+    ("#88B8CE", "#FEFAF0", "#542916", "#A13A1E", "#F1C166", "#2E1509"),     # bleu porcelaine tile
+    ("#FEFAF0", "#EFE3C2", "#A13A1E", "#542916", "#88B8CE", "#2E1509"),     # nuage de lait tile
+    ("#F1C166", "#FEFAF0", "#A13A1E", "#542916", "#88B8CE", "#2E1509"),     # miel dore tile
 ]
 
 
@@ -94,12 +95,12 @@ def scene_desk(p):
 
 SCENES = [scene_stack, scene_van, scene_luggage, scene_house, scene_desk]
 seen = set()
-for i in range(25):
-    s, c = i % 5, (i // 5 + i % 5) % 5
+for i in range(30):
+    s, c = i % 5, (i // 5 + i % 5) % 6
     assert (s, c) not in seen
     seen.add((s, c))
     p = PALETTES[c]
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">'
            f'<rect width="400" height="240" fill="{p[0]}"/>{SCENES[s](p)}</svg>\n')
     open(os.path.join(OUT, f"trip-{i + 1:02d}.svg"), "w").write(svg)
-print("25 pictures written")
+print("30 pictures written")

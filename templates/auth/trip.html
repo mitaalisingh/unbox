@@ -43,6 +43,7 @@
     {% else %}
       {% if not locked %}<a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id, section='rename') }}">Rename trip</a>{% endif %}
       <a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id, section='share') }}">Share by QR (view only)</a>
+      <a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id, section='cover') }}">Change picture</a>
       <a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id, section='copy') }}">Share a copy (trip code)</a>
       <a class="menuitem" href="{{ url_for('labels', tid=trip.id) }}">Print QR labels</a>
       <form method="post" action="{{ url_for('lock_trip', tid=trip.id) }}">

@@ -438,20 +438,53 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         except ValueError:
             abort(404)
 
-    TRIP_PICTURES = 25
+    TRIP_PICTURES = 30
 
-    def trip_pictures(rows):
-        """A different picture for each of someone's trips, picked from 20 ready-made ones. It depends only on the trip,
-        so a trip keeps its picture; trips are given one at a time, oldest first, so two trips never share one."""
-        taken, out, previous = set(), {}, None
-        for r in sorted(rows, key=lambda r: (str(r.get("created_at")), r["id"])):
+    def trip_covers(rows):
+        """What picture each trip shows. A trip can have one chosen from the 30 ready-made illustrations, a photo of its own,
+        or nothing chosen: then one is picked for it from the illustrations nobody else in the account is using, so a
+        trip keeps its picture and two trips never share one."""
+        taken, out, auto = set(), {}, []
+        for r in rows:
+            c = str(r.get("cover") or "")
+            if c.startswith("art:") and c[4:].isdigit() and 1 <= int(c[4:]) <= TRIP_PICTURES:
+                out[r["id"]] = {"art": int(c[4:]) - 1}
+                taken.add(int(c[4:]) - 1)
+            elif c == "photo":
+                out[r["id"]] = {"photo": True}
+            else:
+                auto.append(r)
+        previous = None
+        for r in sorted(auto, key=lambda r: (str(r.get("created_at")), r["id"])):
             n = int(hashlib.sha1(r["id"].encode()).hexdigest(), 16) % TRIP_PICTURES
             order = [(n + step) % TRIP_PICTURES for step in range(TRIP_PICTURES)]
             free = [x for x in order if x not in taken] or order
             pick = next((x for x in free if x % 5 != previous), free[0])      # not the same kind of scene as the trip before it
             taken.add(pick)
             previous = pick % 5
-            out[r["id"]] = f"trips/trip-{pick + 1:02d}.svg"
+            out[r["id"]] = {"art": pick}
+        return out
+
+    def list_trips(token):
+        for columns in ("id,name,archived_at,created_at,cover", "id,name,archived_at,created_at"):
+            try:
+                return client.select("trips", token, {"select": columns, "order": "created_at.desc"})
+            except SupabaseError as e:
+                if e.status != 400 or columns.endswith("created_at"):          # 400 = the database has no "cover" column yet
+                    raise
+
+    def trip_picture_urls(rows, token):
+        covers = trip_covers(rows)
+        photos = {r["id"]: f"{r['id']}/cover.jpg" for r in rows if covers[r["id"]].get("photo")}
+        try:
+            signed = client.sign_many(BUCKET, list(photos.values()), token) if photos else {}
+        except SupabaseError:
+            signed = {}
+        out = {}
+        for r in rows:
+            c = covers[r["id"]]
+            n = c.get("art", 0)
+            out[r["id"]] = signed.get(photos.get(r["id"])) or url_for("static", filename=f"trips/trip-{n + 1:02d}.svg")
         return out
 
     @app.route("/trips", methods=["GET", "POST"])
@@ -466,10 +499,10 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
                 client.insert("trips", user["token"], {"owner_id": user["id"], "name": name})
                 flash(f"Trip “{name}” created.")
             return redirect(url_for("trips"))
-        rows = client.select("trips", user["token"], {"select": "id,name,archived_at,created_at", "order": "created_at.desc"})
+        rows = list_trips(user["token"])
         hello = session.pop("greet", False)
         return render_template("auth/trips.html", active=[r for r in rows if not r.get("archived_at")],
-                               archived=[r for r in rows if r.get("archived_at")], art=trip_pictures(rows),
+                               archived=[r for r in rows if r.get("archived_at")], pic=trip_picture_urls(rows, user["token"]),
                                hello=session.get("name") if hello else None)
 
     @app.route("/trips/<tid>/archive", methods=["POST"])
@@ -510,7 +543,8 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     # ---------------- boxes and items inside a trip ----------------
     NODE_COLUMNS = "id,trip_id,parent_id,is_box,name,description,tags,weight_kg,photo_path,position"
 
-    TRIP_COLUMNS = ("id,name,archived_at,viewer_pw_set_at,locked_at,share_code_expires_at",
+    TRIP_COLUMNS = ("id,name,archived_at,viewer_pw_set_at,locked_at,share_code_expires_at,cover",
+                    "id,name,archived_at,viewer_pw_set_at,locked_at,share_code_expires_at",
                     "id,name,archived_at,viewer_pw_set_at,locked_at",
                     "id,name,archived_at,viewer_pw_set_at")
 
@@ -1089,6 +1123,45 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         flash(f"Copied “{source['name']}” into your account ({len([n for n in nodes if not n['is_box']])} items).")
         return redirect(url_for("trip_view", tid=new_tid))
 
+    @app.route("/trips/<tid>/cover", methods=["POST"])
+    @login_required
+    def set_cover(tid):
+        """Choose the picture a trip shows on the Trips page: an illustration, a photo of your own, or 'pick one for me'."""
+        token, tid = request.user["token"], trip_id_or_404(tid)
+        if not get_trip(tid, token):
+            abort(404)
+        blocked = lock_guard(tid, token)
+        if blocked:
+            return blocked
+        path, back = f"{tid}/cover.jpg", url_for("trips")
+        upload, art = request.files.get("photo"), (request.form.get("art") or "").strip()
+        try:
+            if upload and upload.filename:
+                try:
+                    image = clean_photo(upload.read())                      # location and hidden data removed, like every photo
+                except BadImage as e:
+                    flash(str(e))
+                    return redirect(url_for("trip_settings", tid=tid, section="cover"))
+                client.upload(BUCKET, path, token, image)
+                cover = "photo"
+            elif art.isdigit() and 1 <= int(art) <= TRIP_PICTURES:
+                cover = f"art:{int(art)}"
+            elif request.form.get("auto"):
+                cover = None
+            else:
+                flash("Choose a picture first.")
+                return redirect(url_for("trip_settings", tid=tid, section="cover"))
+            client.update("trips", token, {"id": f"eq.{tid}"}, {"cover": cover})
+            if cover != "photo":                                            # don't keep an old uploaded picture around
+                try:
+                    client.remove(BUCKET, [path], token)
+                except SupabaseError:
+                    pass
+            flash("Picture updated.")
+        except SupabaseError:
+            flash("Couldn't change the picture. The database may need its latest update first.")
+        return redirect(back)
+
     @app.route("/trips/<tid>/settings")
     @login_required
     def trip_settings(tid):
@@ -1102,8 +1175,8 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         if pending and pending[0] == tid and section == "copy":
             new_code = pending[1]
             session.pop("new_code", None)                                  # shown once; only a scrambled version is kept
-        return render_template("auth/trip_settings.html", trip=trip, section=section if section in ("rename", "copy") else "share",
-                               new_code=new_code, share=share_state(tid, token))
+        return render_template("auth/trip_settings.html", trip=trip, section=section if section in ("rename", "copy", "cover") else "share",
+                               new_code=new_code, share=share_state(tid, token), count=TRIP_PICTURES)
 
     @app.route("/trips/<tid>/viewer-password", methods=["POST"])
     @login_required

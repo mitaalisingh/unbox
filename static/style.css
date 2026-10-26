@@ -239,20 +239,24 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .tip span{display:block;color:#5ba39a;text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px}
 .tip b{font-weight:400;transition:opacity .25s}
 
-/* trip cards: translucent glass cards with a picture tile that swaps sides, on black */
-.tripcard{position:relative;display:flex;align-items:stretch;gap:14px;padding:12px;border-radius:34px;list-style:none;min-height:150px;color:var(--ink);
-  background:rgba(240,237,228,.09);border:1px solid rgba(240,237,228,.16);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+/* trip cards: cream, translucent glass with a picture tile that swaps sides, on black */
+.tripcard{position:relative;display:flex;align-items:stretch;gap:12px;padding:10px;border-radius:30px;list-style:none;min-height:118px;color:var(--ink);
+  background:rgba(254,250,240,.84);border:1px solid rgba(255,253,246,.7);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
 .tripcard.flip{flex-direction:row-reverse}
-.tripimg{flex:0 0 46%;aspect-ratio:1.18;border-radius:26px;overflow:hidden;display:block;align-self:center}
+.tripimg{flex:0 0 42%;aspect-ratio:1.18;border-radius:22px;overflow:hidden;display:block;align-self:center}
 .tripimg img{width:100%;height:100%;object-fit:cover;display:block}
-.tripcard .txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:12px 6px 6px;color:inherit}
-.tripcard .txt strong{font-weight:500;font-size:21px;line-height:1.15;color:#fff;overflow-wrap:break-word;hyphens:auto}
-.tripcard .txt small{color:var(--muted);font-size:13px;margin-top:18px}
-.tripcard .more{top:22px;left:22px;right:auto}
-.tripcard.flip .more{left:auto;right:22px}
+.tripcard .txt{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:8px 4px 4px;color:inherit}
+.tripcard .txt strong{font-weight:500;font-size:19px;line-height:1.15;color:#2a1608;overflow-wrap:break-word;hyphens:auto}
+.tripcard .txt small{color:#5d4533;font-size:12.5px;margin-top:14px}
+.tripcard .more{top:18px;left:18px;right:auto}
+.tripcard.flip .more{left:auto;right:18px}
 .tripcard .more .menu{left:0;right:auto}
 .tripcard.flip .more .menu{left:auto;right:0}
-.tripcard .more > summary{background:rgba(0,0,0,.55);border-color:rgba(255,255,255,.22);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.tripcard .more > summary{width:28px;height:28px;font-size:15px;background:rgba(0,0,0,.55);border-color:rgba(255,255,255,.25);color:#fff;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.picker{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.picker button{padding:0;border:2px solid transparent;border-radius:14px;overflow:hidden;background:none;cursor:pointer;display:block;aspect-ratio:1.4}
+.picker button.on{border-color:var(--paper)}
+.picker img{width:100%;height:100%;object-fit:cover;display:block}
 .hello{overflow:hidden;animation:hello 5s ease forwards}
 .hello h1{font-size:40px;line-height:1.08;margin:6px 0 10px}
 .hello em{font-style:italic;font-weight:500}
