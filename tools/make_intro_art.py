@@ -6,8 +6,8 @@ import os
 import random
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "intro")
-CREAM, MID, DARK = "#e7e5d9", "#b0ac9e", "#78756a"
-ORANGE, TEAL = "#e2693a", "#5ba39a"
+CREAM, MID, DARK = "#FEFAF0", "#B79858", "#A13A1E"               # nuage de lait, eau trouble, terre cuite
+ORANGE, TEAL = "#F1C166", "#88B8CE"                                 # miel dore, bleu porcelaine
 K = math.sqrt(3) / 2
 
 
@@ -63,8 +63,8 @@ a1 = corners(70, 70, 330, 330) + cube(200, 215, 78) + (
     f'<rect x="292" y="288" width="22" height="22" rx="5" fill="{MID}" transform="rotate(18 303 299)"/>'
     f'<rect x="84" y="276" width="16" height="30" rx="5" fill="{DARK}" transform="rotate(-12 92 291)"/>')
 # 2: three small parcels dropping into a big one
-a2 = (cube(200, 262, 90, top=CREAM) + cube(120, 130, 34, top=MID, left=DARK, right="#5b594f", tape=False)
-      + cube(205, 95, 34, top=CREAM, left=MID, right=DARK) + cube(290, 140, 34, top=MID, left=DARK, right="#5b594f", tape=False)
+a2 = (cube(200, 262, 90, top=CREAM) + cube(120, 130, 34, top=MID, left=DARK, right="#542916", tape=False)
+      + cube(205, 95, 34, top=CREAM, left=MID, right=DARK) + cube(290, 140, 34, top=MID, left=DARK, right="#542916", tape=False)
       + f'<path d="M120 175 Q140 215 188 222 M205 140 L205 196 M290 185 Q272 215 222 222" stroke="{TEAL}" stroke-width="3" stroke-dasharray="3 8" stroke-linecap="round"/>')
 # 3: a parcel with a QR label
 a3 = cube(200, 205, 110, qr=True) + f'<path d="M64 330 H336" stroke="{TEAL}" stroke-width="3" stroke-linecap="round"/>'

@@ -212,9 +212,9 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
   min-height:min(64vh,520px);padding:26px 22px;border-radius:28px;background:#0b0b0b;border:1px solid var(--edge);overflow:hidden}
 .icard h1{font-size:30px;line-height:1.12;margin:0;font-weight:500;color:#fff;letter-spacing:-.01em}
 .icard .art{width:min(78%,300px);align-self:center;margin:6px 0;flex:none}
-.icard .cap{font:400 11px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:#cfcdc2;margin:0}
+.icard .cap{font:400 11px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:#EFE3C2;margin:0}
 .icard .capfoot{margin-top:10px}
-.icard .rule{height:2px;width:64%;background:#5ba39a;border-radius:2px;margin:12px 0 0}
+.icard .rule{height:2px;width:64%;background:#88B8CE;border-radius:2px;margin:12px 0 0}
 .icard .foot{display:flex;align-items:center;gap:12px}
 .icard .foot .rule{flex:1;margin:0}
 .mark{display:inline-flex;align-items:center;gap:8px;color:#fff;font-weight:500;font-size:15px}
@@ -234,9 +234,9 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .busybox{width:min(340px,100%);text-align:center}
 .busylabel{font-size:20px;font-weight:500;color:#fff;margin:8px 0 14px}
 .bar{height:4px;border-radius:4px;background:var(--edge);overflow:hidden}
-.bar i{display:block;height:100%;width:4%;background:#5ba39a;border-radius:4px;transition:width .4s ease}
-.tip{margin:26px 0 0;font:400 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:#cfcdc2;min-height:4.2em}
-.tip span{display:block;color:#5ba39a;text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px}
+.bar i{display:block;height:100%;width:4%;background:#88B8CE;border-radius:4px;transition:width .4s ease}
+.tip{margin:26px 0 0;font:400 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:#EFE3C2;min-height:4.2em}
+.tip span{display:block;color:#88B8CE;text-transform:uppercase;letter-spacing:.14em;margin-bottom:6px}
 .tip b{font-weight:400;transition:opacity .25s}
 
 /* trip cards: black with a white border and a picture tile that swaps sides */

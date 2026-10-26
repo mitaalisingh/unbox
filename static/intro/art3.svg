@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
-<polygon points="104.7,150.0 200.0,205.0 200.0,315.0 104.7,260.0" fill="#b0ac9e"/>
-<polygon points="200.0,205.0 295.3,150.0 295.3,260.0 200.0,315.0" fill="#78756a"/>
-<polygon points="200.0,95.0 295.3,150.0 200.0,205.0 104.7,150.0" fill="#e7e5d9"/>
-<polygon points="163.8,115.9 140.9,129.1 236.2,184.1 259.1,170.9" fill="#e2693a"/>
+<polygon points="104.7,150.0 200.0,205.0 200.0,315.0 104.7,260.0" fill="#B79858"/>
+<polygon points="200.0,205.0 295.3,150.0 295.3,260.0 200.0,315.0" fill="#A13A1E"/>
+<polygon points="200.0,95.0 295.3,150.0 200.0,205.0 104.7,150.0" fill="#FEFAF0"/>
+<polygon points="163.8,115.9 140.9,129.1 236.2,184.1 259.1,170.9" fill="#F1C166"/>
 <polygon points="120.0,176.4 184.8,213.8 184.8,288.6 120.0,251.2" fill="#ffffff"/>
 <polygon points="125.7,186.3 132.6,190.3 132.6,198.2 125.7,194.2" fill="#0b0b0b"/>
 <polygon points="125.7,195.1 132.6,199.1 132.6,207.0 125.7,203.0" fill="#0b0b0b"/>
@@ -43,5 +43,5 @@
 <polygon points="171.4,221.5 178.3,225.5 178.3,233.4 171.4,229.4" fill="#0b0b0b"/>
 <polygon points="171.4,230.3 178.3,234.3 178.3,242.2 171.4,238.2" fill="#0b0b0b"/>
 <polygon points="171.4,247.9 178.3,251.9 178.3,259.8 171.4,255.8" fill="#0b0b0b"/>
-<polygon points="171.4,265.5 178.3,269.5 178.3,277.4 171.4,273.4" fill="#0b0b0b"/><path d="M64 330 H336" stroke="#5ba39a" stroke-width="3" stroke-linecap="round"/>
+<polygon points="171.4,265.5 178.3,269.5 178.3,277.4 171.4,273.4" fill="#0b0b0b"/><path d="M64 330 H336" stroke="#88B8CE" stroke-width="3" stroke-linecap="round"/>
 </svg>

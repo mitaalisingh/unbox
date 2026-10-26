@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" fill="none">
-<path d="M96,70 L70,70 L70,96 M304,70 L330,70 L330,96 M96,330 L70,330 L70,304 M304,330 L330,330 L330,304 " stroke="#5ba39a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><polygon points="132.5,176.0 200.0,215.0 200.0,293.0 132.5,254.0" fill="#b0ac9e"/>
-<polygon points="200.0,215.0 267.5,176.0 267.5,254.0 200.0,293.0" fill="#78756a"/>
-<polygon points="200.0,137.0 267.5,176.0 200.0,215.0 132.5,176.0" fill="#e7e5d9"/>
-<polygon points="174.3,151.8 158.1,161.2 225.7,200.2 241.9,190.8" fill="#e2693a"/><circle cx="92" cy="108" r="11" fill="#e7e5d9"/><circle cx="312" cy="96" r="7" fill="#e2693a"/><rect x="292" y="288" width="22" height="22" rx="5" fill="#b0ac9e" transform="rotate(18 303 299)"/><rect x="84" y="276" width="16" height="30" rx="5" fill="#78756a" transform="rotate(-12 92 291)"/>
+<path d="M96,70 L70,70 L70,96 M304,70 L330,70 L330,96 M96,330 L70,330 L70,304 M304,330 L330,330 L330,304 " stroke="#88B8CE" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><polygon points="132.5,176.0 200.0,215.0 200.0,293.0 132.5,254.0" fill="#B79858"/>
+<polygon points="200.0,215.0 267.5,176.0 267.5,254.0 200.0,293.0" fill="#A13A1E"/>
+<polygon points="200.0,137.0 267.5,176.0 200.0,215.0 132.5,176.0" fill="#FEFAF0"/>
+<polygon points="174.3,151.8 158.1,161.2 225.7,200.2 241.9,190.8" fill="#F1C166"/><circle cx="92" cy="108" r="11" fill="#FEFAF0"/><circle cx="312" cy="96" r="7" fill="#F1C166"/><rect x="292" y="288" width="22" height="22" rx="5" fill="#B79858" transform="rotate(18 303 299)"/><rect x="84" y="276" width="16" height="30" rx="5" fill="#A13A1E" transform="rotate(-12 92 291)"/>
 </svg>
