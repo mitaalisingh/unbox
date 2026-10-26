@@ -21,6 +21,10 @@
   <li><a class="glass boxcard" href="{{ url_for('about') }}" style="min-height:64px"><span class="txt"><strong>About the creator</strong></span>
     <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></a></li>
 </ul>
+<ul class="stack">
+  <li><a class="glass boxcard" href="{{ url_for('privacy') }}" style="min-height:64px"><span class="txt"><strong>Privacy notice</strong></span>
+    <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></a></li>
+</ul>
 <form method="post" action="{{ url_for('logout') }}">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   <button class="danger" type="submit">Log out</button>

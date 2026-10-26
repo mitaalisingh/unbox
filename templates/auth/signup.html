@@ -10,7 +10,7 @@
   <input type="password" name="password" placeholder="Password (10+ characters)" aria-label="Password" required minlength="10" autocomplete="new-password">
   <input type="password" name="password2" placeholder="Type it again" aria-label="Type the password again" required minlength="10" autocomplete="new-password">
   <label class="gcheck"><input type="checkbox" name="age18" required> I am 18 or older</label>
-  <label class="gcheck"><input type="checkbox" name="terms" required> <span>I have read the <a href="{{ url_for('privacy') }}" target="_blank">privacy notice</a> and I agree</span></label>
+  <label class="gcheck"><input type="checkbox" name="terms" required> <span>I have read the <a href="{{ url_for('privacy') }}" target="_blank" rel="noopener">privacy notice</a> (opens in a new tab) and I agree</span></label>
   <button class="glassbtn" type="submit">Create account</button>
 </form>
 <p class="gfoot">Already have one? <a href="{{ url_for('login') }}">Log in</a></p>

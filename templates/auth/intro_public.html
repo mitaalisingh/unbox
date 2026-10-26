@@ -4,4 +4,5 @@
 {% block content %}
 <script>try { if (localStorage.getItem('unbox-no-intro')) { location.replace({{ go|tojson }}); } } catch (e) {}</script>
 {% set public = true %}{% include "auth/_intro.html" %}
+<p class="legalrow"><a href="{{ url_for('privacy') }}">Privacy notice</a> · <a href="{{ url_for('about') }}">About the creator</a></p>
 {% endblock %}

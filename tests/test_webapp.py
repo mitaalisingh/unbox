@@ -283,7 +283,8 @@ def test_failed_refresh_logs_the_user_out(client, fake):
 def test_public_pages_work(client):
     for path in ("/", "/privacy", "/signup", "/login", "/forgot"):
         assert client.get(path).status_code == 200
-    assert "Draft" in client.get("/privacy").get_data(as_text=True).replace('&#39;', "'")
+    notice = client.get("/privacy").get_data(as_text=True)
+    assert "draft" in notice and "not been reviewed by a lawyer" in notice                # honest about what it is
 
 
 # ================= boxes, items and photos =================
@@ -1746,3 +1747,18 @@ def test_page_titles_are_plain_text_and_the_add_flow_pages_track_their_steps(fak
     for path in pages[:3]:
         assert "Flow.step()" in owner.get(path).get_data(as_text=True)                   # these steps are part of the add detour
     assert "Flow.start()" in owner.get(f"/trips/{tid}").get_data(as_text=True)           # and it begins from the trip page
+
+
+def test_the_privacy_notice_is_readable_accurate_and_linked_from_the_places_people_look(client, fake):
+    page = client.get("/privacy")
+    html = page.get_data(as_text=True)
+    assert page.status_code == 200 and "Last updated" in html
+    for must in ("our own server", "not sent to any AI company", "Supabase", "Render", "Delete my account", "Share by QR", "trip code", "18"):
+        assert must in html, must
+    assert "on your own device" not in html                                              # the old, wrong claim about where photos are named
+    for path in ("/", "/login", "/signup", "/forgot"):
+        assert "/privacy" in client.get(path).get_data(as_text=True), path               # reachable before signing up
+    assert "opens in a new tab" in client.get("/signup").get_data(as_text=True)
+    make_user(fake)
+    login(client, "a@example.com")
+    assert "/privacy" in client.get("/account").get_data(as_text=True)                   # and from the profile

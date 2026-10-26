@@ -334,3 +334,10 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .about .skills{margin:6px 0}.about .skills dt{font-family:Georgia,"Times New Roman",serif;color:#fff;font-size:19px;margin-top:12px}
 .about .skills dd{margin:2px 0 0;color:var(--body);font-size:15.5px;line-height:1.55}
 .about .pull{margin:18px 0 6px;padding:2px 0 2px 16px;border-left:3px solid #F1C166;font:italic 400 22px/1.35 Georgia,"Times New Roman",serif;color:#fff}
+
+.gbottom,.legalrow{text-align:center;font-size:13px;margin:0 0 30px;color:rgba(255,255,255,.8)}
+.gbottom a,.legalrow a{color:#fff;text-decoration:underline;text-underline-offset:2px}
+.legalrow{margin-top:18px}
+.legal h2{font-size:19px;margin:24px 0 6px;text-transform:none;letter-spacing:0;color:#fff}
+.legal p,.legal li{color:var(--body);font-size:15.5px;line-height:1.6}
+.legal ul{padding-left:18px;margin:6px 0}.legal li{margin-bottom:8px}
