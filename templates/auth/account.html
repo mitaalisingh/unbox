@@ -13,6 +13,17 @@
   <li><a class="glass boxcard" href="{{ url_for('change_password') }}" style="min-height:64px"><span class="txt"><strong>Change password</strong></span>
     <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></a></li>
 </ul>
+<section class="glass addbox privacycard">
+  <h2 style="margin-top:0">Your privacy</h2>
+  <ul>
+    <li>Your photos are private. Only you see them, unless you share.</li>
+    <li>The hidden location is removed from every photo.</li>
+    <li>The AI that names photos runs on our own server, not another company's.</li>
+    <li>No ads, no tracking, and we never sell your data.</li>
+    <li>You can delete your account and everything in it, any time.</li>
+  </ul>
+  <p style="margin:10px 0 0"><a class="chip solid" href="{{ url_for('privacy') }}">Read the full privacy notice</a></p>
+</section>
 <ul class="stack">
   <li><a class="glass boxcard" href="{{ url_for('welcome') }}" style="min-height:64px"><span class="txt"><strong>Instructions</strong></span>
     <svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></a></li>

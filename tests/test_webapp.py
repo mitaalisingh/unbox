@@ -284,7 +284,7 @@ def test_public_pages_work(client):
     for path in ("/", "/privacy", "/signup", "/login", "/forgot"):
         assert client.get(path).status_code == 200
     notice = client.get("/privacy").get_data(as_text=True)
-    assert "draft" in notice and "not been reviewed by a lawyer" in notice                # honest about what it is
+    assert "student project" in notice and "A lawyer has not checked it" in notice          # honest about what it is
 
 
 # ================= boxes, items and photos =================
@@ -1753,7 +1753,7 @@ def test_the_privacy_notice_is_readable_accurate_and_linked_from_the_places_peop
     page = client.get("/privacy")
     html = page.get_data(as_text=True)
     assert page.status_code == 200 and "Last updated" in html
-    for must in ("our own server", "not sent to any AI company", "Supabase", "Render", "Delete my account", "Share by QR", "trip code", "18"):
+    for must in ("our own server", "not sent to any AI company", "Supabase", "Render", "Delete my account", "Share by QR", "trip code", "18", "The short version"):
         assert must in html, must
     assert "on your own device" not in html                                              # the old, wrong claim about where photos are named
     for path in ("/", "/login", "/signup", "/forgot"):
@@ -1761,4 +1761,16 @@ def test_the_privacy_notice_is_readable_accurate_and_linked_from_the_places_peop
     assert "opens in a new tab" in client.get("/signup").get_data(as_text=True)
     make_user(fake)
     login(client, "a@example.com")
-    assert "/privacy" in client.get("/account").get_data(as_text=True)                   # and from the profile
+    account = client.get("/account").get_data(as_text=True)
+    assert "/privacy" in account and "Your privacy" in account and "Your photos are private" in account    # a summary right on the profile
+
+
+def test_contact_and_data_location_come_from_the_server_settings(client, monkeypatch):
+    monkeypatch.delenv("CONTACT_EMAIL", raising=False)
+    monkeypatch.delenv("DATA_LOCATION", raising=False)
+    plain = client.get("/privacy").get_data(as_text=True)
+    assert "github.com/mitaalisingh/unbox" in plain and "may be in other countries" in plain and "mailto:" not in plain
+    monkeypatch.setenv("CONTACT_EMAIL", "help@example.com")
+    monkeypatch.setenv("DATA_LOCATION", "Mumbai, India")
+    page = client.get("/privacy").get_data(as_text=True)
+    assert 'mailto:help@example.com' in page and "Your data is stored in: Mumbai, India." in page and "other countries" not in page

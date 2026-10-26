@@ -341,3 +341,4 @@ form.quick .row{display:flex;gap:8px;justify-content:flex-end}
 .legal h2{font-size:19px;margin:24px 0 6px;text-transform:none;letter-spacing:0;color:#fff}
 .legal p,.legal li{color:var(--body);font-size:15.5px;line-height:1.6}
 .legal ul{padding-left:18px;margin:6px 0}.legal li{margin-bottom:8px}
+.privacycard ul{padding-left:18px;margin:6px 0 4px}.privacycard li{color:var(--body);font-size:15px;line-height:1.5;margin-bottom:5px}

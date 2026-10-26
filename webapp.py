@@ -233,7 +233,9 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
 
     @app.route("/privacy")
     def privacy():
-        return render_template("auth/privacy.html")
+        # Contact email and where the data is kept are set on the server (Render settings), so they never sit in the public code.
+        return render_template("auth/privacy.html", contact_email=os.environ.get("CONTACT_EMAIL", "").strip(),
+                               data_location=os.environ.get("DATA_LOCATION", "").strip())
 
     # ---------------- sign-up / login / reset ----------------
     # Invite codes: when INVITE_CODES is set (comma-separated), only people holding one can sign up.

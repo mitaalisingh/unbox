@@ -11,6 +11,10 @@ services:
         sync: false
       - key: SUPABASE_SECRET_KEY
         sync: false          # used ONLY to show a trip to viewers who know its viewer password
+      - key: CONTACT_EMAIL
+        sync: false          # shown on the privacy notice; optional
+      - key: DATA_LOCATION
+        sync: false          # where the data is kept, shown on the privacy notice; optional
       - key: INVITE_CODES
         sync: false          # comma-separated codes you choose; sign-up needs one
       - key: SECRET_KEY

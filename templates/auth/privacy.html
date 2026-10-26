@@ -5,48 +5,65 @@
 <article class="legal">
 <h1>Privacy notice</h1>
 <p class="muted small">Last updated 26 October 2026.</p>
-<p class="flash">Unbox is a student project. This notice is a plain-language draft and has not been reviewed by a lawyer.</p>
+<p class="flash">Unbox is a student project. I wrote this in plain words. A lawyer has not checked it.</p>
 
-<h2>Who we are</h2>
-<p>Unbox is a college project by Mitaali Singh. To ask a question or make a request, open an issue at <a href="https://github.com/mitaalisingh/unbox" rel="noopener">github.com/mitaalisingh/unbox</a>.</p>
-
-<h2>What we collect, and why</h2>
+<h2>The short version</h2>
 <ul>
-  <li><b>Your account:</b> your email address (to log you in, confirm your account and reset your password), your password (we never see it; our login provider keeps it scrambled), an optional first name (to greet you), and a record that you confirmed you are 18 or older and accepted this notice, with the time.</li>
-  <li><b>What you add:</b> trips, boxes, item names, weights, tags and notes, your photos, and a picture for a trip if you upload one.</li>
-  <li><b>Small settings kept on your phone or browser:</b> a login cookie so you stay logged in, and choices such as Grid or Swipe, or that you have seen the instructions. These are not used to track you.</li>
-  <li><b>Basic technical records:</b> our host keeps standard request logs (for example the time, the page and your internet address) to keep the service running and safe. Wrong password attempts on a shared trip are counted using a scrambled version of your internet address, so guessing can be slowed down.</li>
+  <li>Your photos are private. Only you can see them, unless you choose to share.</li>
+  <li>We remove the hidden location from every photo you upload.</li>
+  <li>The AI that names your photos runs on our own server. Your photos are not sent to any AI company.</li>
+  <li>No ads. No tracking. We never sell your data.</li>
+  <li>You can delete a photo, a trip, or your whole account whenever you want.</li>
 </ul>
-<p>We do not ask for your phone number, home address or payment details.</p>
 
-<h2>Photos and the AI</h2>
-<p>Photos are kept in private storage and shown through links that expire after an hour. When you upload a photo, we remove location data and other hidden information from it, shrink it, and do not keep the original.</p>
-<p>To suggest names, our own server looks at your photos with an open-source model. <b>Your photos are not sent to any AI company or other third party for this.</b> They do pass through the servers of our hosting providers, listed below.</p>
-
-<h2>Who handles your data</h2>
+<h2>What we keep about you</h2>
 <ul>
-  <li><b>Supabase</b> stores the database, the login system and your files.</li>
+  <li><b>Your email.</b> So you can log in and get messages from us.</li>
+  <li><b>Your password.</b> We can't read it. It is stored in a locked-up form.</li>
+  <li><b>Your first name,</b> if you gave one. We use it to say hello.</li>
+  <li><b>The time you agreed to this notice,</b> and that you said you are 18 or older.</li>
+</ul>
+<p>We do not ask for your phone number, your address or any payment details.</p>
+
+<h2>What you add</h2>
+<p>Your trips, boxes, item names, weights, notes and photos. Also a trip picture, if you upload one.</p>
+
+<h2>Small things saved on your phone</h2>
+<p>A tiny note called a cookie keeps you logged in. Your phone also remembers choices like Grid or Swipe, and whether you have seen the instructions. These are not used to follow you around.</p>
+
+<h2>Simple records we keep</h2>
+<p>The website's host writes basic logs, like the time and which page was opened. This helps keep the service safe. If someone guesses the password of a shared trip too many times, we note it so we can slow them down.</p>
+
+<h2>Your photos and the AI</h2>
+<p>When you upload a photo, we do three things:</p>
+<ol>
+  <li>Remove the hidden location and camera details.</li>
+  <li>Make the photo smaller.</li>
+  <li>Throw away the big original.</li>
+</ol>
+<p>Then a small AI program on our own server looks at the photo and suggests a name. It is open source. It is not another company's AI service. Your photos are kept with the storage company listed below.</p>
+
+<h2>Which companies help us</h2>
+<ul>
+  <li><b>Supabase</b> keeps the database, the logins and your photo files.</li>
   <li><b>Render</b> runs the app.</li>
-  <li><b>GitHub</b> holds only the program code, never your data.</li>
+  <li><b>GitHub</b> keeps only the app's code. It never gets your data.</li>
 </ul>
-<p>These providers act for us. Their servers may be outside India.</p>
+<p>{% if data_location %}Your data is stored in: {{ data_location }}.{% else %}These companies keep your data on computers in data centres. Those computers may be in other countries.{% endif %}</p>
 
-<h2>Who can see your data</h2>
+<h2>Who can see what you add</h2>
 <ul>
-  <li><b>You.</b> Other accounts cannot see your trips.</li>
-  <li><b>Anyone you share with.</b> If you turn on <i>Share by QR</i>, anyone who has a QR label or link for that trip can look at it, read-only, without an account. If you set a password, they need it. With no password, the link itself is the only protection, so use a password for anything private.</li>
-  <li><b>Whoever you give a trip code to.</b> They get their own copy of the trip, photos included. After that, the copy is theirs and we cannot take it back.</li>
-  <li><b>The developer.</b> Because of how the service is built, the developer can technically see stored data in the provider dashboards. I will not look unless you ask for support or it is needed to keep the service safe.</li>
+  <li><b>You.</b> Other users cannot see your trips.</li>
+  <li><b>People you share with.</b> With <i>Share by QR</i>, anyone who has the QR or link can look at that trip. They can't change anything. If you set a password, they need it. If you don't, anyone who gets the QR can look, so use a password for private things.</li>
+  <li><b>People you give a trip code to.</b> They get their own copy, photos too. After that the copy is theirs, and we can't take it back.</li>
+  <li><b>Me, the maker.</b> The tools I use can show me stored data. I won't look unless you ask me for help, or I need to fix a safety problem.</li>
 </ul>
 
 <h2>Deleting your data</h2>
-<p>You can delete a trip, which removes its items and photos, or delete your whole account under <i>Profile → Delete my account</i>, which removes your login, trips, items and photos. Copies that someone already made with a trip code stay with them. Deleted data may stay briefly in our providers' backups.</p>
+<p>Delete a trip and its items and photos are removed. Delete your account (Profile, then <i>Delete my account</i>) and your login, trips, items and photos are removed. A copy that a friend already made with a trip code stays with them. Deleted data may stay for a short time in the backups of the companies above.</p>
 
-<h2>Your choices</h2>
-<p>You can see, change and delete most of your data yourself in the app. For anything else, use the contact above. Unbox is for people aged 18 and over.</p>
-
-<h2>No selling, no ads</h2>
-<p>We do not sell your data, share it for advertising, or use advertising or analytics trackers.</p>
+<h2>Your choices, and how to reach me</h2>
+<p>You can see, change and delete most things yourself in the app. For anything else, {% if contact_email %}email me at <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}write on the project's page at <a href="https://github.com/mitaalisingh/unbox" rel="noopener">github.com/mitaalisingh/unbox</a>. That page is public{% endif %}. Unbox is only for people aged 18 or older.</p>
 
 <h2>Changes</h2>
 <p>If this notice changes, the date at the top changes too.</p>
