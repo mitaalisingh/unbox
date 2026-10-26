@@ -90,6 +90,7 @@ The plan and the reasons behind each choice are in [DESIGN.md](DESIGN.md).
 - [ ] "Scan a pile": one photo, objects found and cropped automatically, unknown ones named "Unidentified item"
 - [x] A viewer password per trip, so the QR itself carries no secret
 - [x] QR labels generated in-app
+- [x] Logo: a box with a QR label on its side (`tools/make_logo.py`, `tools/make_icons.py` draw the SVG and the app icons)
 - [x] Installable on a phone's home screen (web app manifest, icons, a do-nothing service worker that stores no private data)
 - [x] The home page for visitors is the four instruction cards (Skip, or "Don't show this again" on that device), then a liquid-glass login ("Hello! Good to see you") over a soft, moving background; a brand-new account sees the cards once after confirming its email; Profile → Instructions shows them again
 - [x] Location data stripped from every uploaded photo

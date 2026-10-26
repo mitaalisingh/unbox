@@ -1220,6 +1220,7 @@ def test_app_install_files_are_served(client):
     sw = client.get("/sw.js")
     assert sw.status_code == 200 and "javascript" in sw.mimetype and "caches" not in sw.get_data(as_text=True)    # stores nothing
     assert b'rel="manifest"' in client.get("/login").data and b"apple-touch-icon" in client.get("/login").data
+    assert client.get("/static/icons/logo.svg").status_code == 200 and b"icons/logo.svg" in client.get("/login").data
 
 
 def test_the_introduction_needs_login_and_is_always_reachable_from_the_profile(client, fake):

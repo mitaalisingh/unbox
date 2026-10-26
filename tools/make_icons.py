@@ -1,27 +1,40 @@
-"""Draws the app icon (a cube on black) in the coffee-shop colours: static/icons/*.png.  Run:  python tools/make_icons.py"""
-import math
+"""Draws the app icons from the chosen logo (the QR-label box): static/icons/*.png and logo.svg.  Run:  python tools/make_icons.py"""
 import os
+import sys
+
 from PIL import Image, ImageDraw
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import make_logo as L  # noqa: E402
+
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "icons")
-TOP, LEFT, RIGHT, TAPE = (254, 250, 240), (183, 152, 88), (161, 58, 30), (241, 193, 102)
 
 
-def cube(size, pad):
-    im = Image.new("RGB", (size, size), (0, 0, 0))
+def rgb(h):
+    return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+
+def draw(size, rounded, scale):
+    """The logo on a dark tile. rounded=True: rounded corners with transparent edges. scale<1 leaves room for phone masks."""
+    big = size * 4
+    im = Image.new("RGBA", (big, big), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    cx = cy = size / 2
-    r = size * (0.5 - pad)
-    top, tr, br, bot, bl, tl = [(cx + r * math.cos(math.radians(a)), cy + r * math.sin(math.radians(a))) for a in (-90, -30, 30, 90, 150, 210)]
-    c = (cx, cy)
-    d.polygon([top, tr, c, tl], fill=TOP)
-    d.polygon([tl, c, bot, bl], fill=LEFT)
-    d.polygon([tr, br, bot, c], fill=RIGHT)
-    lerp = lambda a, b, t: (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)       # a strip of tape across the lid
-    d.polygon([lerp(top, tl, .38), lerp(top, tl, .62), lerp(tr, c, .62), lerp(tr, c, .38)], fill=TAPE)
-    return im
+    bg = rgb(L.DARK) + (255,)
+    if rounded:
+        d.rounded_rectangle([0, 0, big - 1, big - 1], radius=int(big * 0.22), fill=bg)
+    else:
+        d.rectangle([0, 0, big, big], fill=bg)
+    k = big / 512
+    cx = cy = 256
+    for pts, fill in L.shapes_c():
+        d.polygon([((x - cx) * scale * k + big / 2, (y - 280) * scale * k + big / 2) for x, y in pts], fill=rgb(fill))
+    return im.resize((size, size), Image.LANCZOS)
 
 
-for name, size, pad in (("icon-512.png", 512, 0.2), ("icon-192.png", 192, 0.2), ("apple-touch-icon.png", 180, 0.2), ("icon-maskable-512.png", 512, 0.27)):
-    cube(size, pad).save(os.path.join(OUT, name))
-print("icons written")
+if __name__ == "__main__":
+    draw(512, True, 1.0).save(os.path.join(OUT, "icon-512.png"))
+    draw(192, True, 1.0).save(os.path.join(OUT, "icon-192.png"))
+    draw(180, False, 0.9).convert("RGB").save(os.path.join(OUT, "apple-touch-icon.png"))       # iPhones round the corners themselves
+    draw(512, False, 0.74).convert("RGB").save(os.path.join(OUT, "icon-maskable-512.png"))     # Android may crop to a circle or squircle
+    open(os.path.join(OUT, "logo.svg"), "w").write(L.logo_c())
+    print("icons written")
