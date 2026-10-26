@@ -1368,3 +1368,55 @@ def test_a_failed_copy_leaves_nothing_behind(fake, app, monkeypatch):
     assert "Nothing was added" in page
     assert not [t for t in fake.tables["trips"] if t["owner_id"] == fake.users["friend@example.com"]["id"]]
     assert not [p for p in fake.storage if not p.startswith(tid + "/")]                       # copied photos were removed again
+
+
+# ================= delete my account =================
+def test_deleting_an_account_removes_everything_and_only_that_persons_data(fake, app):
+    owner, tid, big = shared_trip(fake, app, password="welcome", email="gone@example.com", name="Mine")
+    other, tid2, big2 = shared_trip(fake, app, password=None, email="stays@example.com", name="Theirs")
+    page = owner.get("/account/delete").get_data(as_text=True)
+    assert "gone@example.com" in page and "can't be undone" in page
+    r = post(owner, "/account/delete", {"password": GOOD_PW, "sure": "on"})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/")
+    assert "gone@example.com" not in fake.users and ("delete_user", ) == fake.admin_calls[-1][:1]
+    assert not [t for t in fake.tables["trips"] if t["name"] == "Mine"] and not [n for n in fake.tables["nodes"] if n["trip_id"] == tid]
+    assert not [p for p in fake.storage if p.startswith(tid + "/")]                        # photos gone
+    assert [p for p in fake.storage if p.startswith(tid2 + "/")]                           # the other person's photos untouched
+    assert [t for t in fake.tables["trips"] if t["name"] == "Theirs"] and "stays@example.com" in fake.users
+    assert owner.get("/trips").status_code == 302                                           # logged out
+    assert login(app.test_client(), "gone@example.com").status_code == 401                  # can't log in any more
+    assert viewer_cannot_open(app, tid, big)
+
+
+def viewer_cannot_open(app, tid, big):
+    return app.test_client().get(f"/v/{tid}/{big}").status_code == 401
+
+
+def test_deleting_needs_the_password_and_the_tick_box(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None, email="gone@example.com", name="Mine")
+    assert post(owner, "/account/delete", {"password": GOOD_PW}).status_code == 400            # no tick
+    assert post(owner, "/account/delete", {"password": "wrong password!", "sure": "on"}).status_code == 400
+    assert "gone@example.com" in fake.users and [t for t in fake.tables["trips"] if t["name"] == "Mine"]
+    anon = app.test_client()
+    assert anon.get("/account/delete").status_code == 302 and post(anon, "/account/delete", {"password": GOOD_PW, "sure": "on"}).status_code == 302
+    assert "gone@example.com" in fake.users
+
+
+def test_if_photos_cannot_be_removed_the_account_is_kept(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None, email="gone@example.com", name="Mine")
+    fake.fail_remove = True
+    r = post(owner, "/account/delete", {"password": GOOD_PW, "sure": "on"})
+    assert r.status_code == 500 and "account was kept" in r.get_data(as_text=True)
+    assert "gone@example.com" in fake.users and not any(c[0] == "delete_user" for c in fake.admin_calls)
+
+
+def test_a_friends_copy_survives_the_original_owner_deleting_their_account(fake, app):
+    owner, tid, big = shared_trip(fake, app, password=None, email="gone@example.com", name="Mine")
+    code = make_code(owner, tid)
+    friend = friend_client(app, fake)
+    post(friend, "/trips/import", {"code": code})
+    post(owner, "/account/delete", {"password": GOOD_PW, "sure": "on"})
+    mine = [t for t in fake.tables["trips"] if t["owner_id"] == fake.users["friend@example.com"]["id"]]
+    assert len(mine) == 1
+    copy_lamp = next(n for n in fake.tables["nodes"] if n["trip_id"] == mine[0]["id"] and n["name"] == "Secret lamp")
+    assert copy_lamp["photo_path"] in fake.storage                                          # the copy has its own photo file

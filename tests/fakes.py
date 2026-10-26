@@ -219,3 +219,15 @@ class FakeSupabase:
         if self.fail_copy_for and source in self.fail_copy_for:
             raise SupabaseError("The photo couldn't be saved. Please try again.", 500)
         self.storage[destination] = self.storage[source]
+
+    def admin_delete_user(self, user_id):
+        self.admin_calls.append(("delete_user", user_id))
+        email = next((e for e, u in self.users.items() if u["id"] == user_id), None)
+        if email:
+            del self.users[email]
+        self.tokens = {t: u for t, u in self.tokens.items() if u != user_id}
+        self.refresh_tokens = {t: u for t, u in self.refresh_tokens.items() if u != user_id}
+        gone = {t["id"] for t in self.tables["trips"] if t["owner_id"] == user_id}
+        self.tables["trips"] = [t for t in self.tables["trips"] if t["owner_id"] != user_id]
+        self.tables["nodes"] = [n for n in self.tables["nodes"] if n["trip_id"] not in gone]
+        self.tables["profiles"] = [p for p in self.tables["profiles"] if p.get("user_id") != user_id]

@@ -318,6 +318,32 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
     def account():
         return render_template("auth/account.html")
 
+    @app.route("/account/delete", methods=["GET", "POST"])
+    @login_required
+    def delete_account():
+        user = request.user
+        if request.method == "POST":
+            if not request.form.get("sure"):
+                flash("Tick the box to confirm. Deleting your account can't be undone.")
+                return render_template("auth/delete_account.html"), 400
+            try:
+                client.sign_in(user["email"], request.form.get("password", ""))         # proves it is really them
+            except SupabaseError as e:
+                flash(str(e) if e.status == 429 else "That password isn't right.")
+                return render_template("auth/delete_account.html"), 400
+            token = user["token"]
+            try:                                      # photos first: if any can't be removed, nothing is deleted
+                for t in client.select("trips", token, {"select": "id"}):
+                    client.remove(BUCKET, client.list_folder(BUCKET, t["id"], token), token)
+                client.admin_delete_user(user["id"])
+            except SupabaseError:
+                flash("Couldn't delete everything, so your account was kept. Please try again.")
+                return render_template("auth/delete_account.html"), 500
+            session.clear()
+            flash("Your account and everything in it have been deleted.")
+            return redirect(url_for("home"))
+        return render_template("auth/delete_account.html")
+
     @app.route("/account/password", methods=["GET", "POST"])
     @login_required
     def change_password():

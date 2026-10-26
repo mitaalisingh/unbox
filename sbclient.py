@@ -193,3 +193,7 @@ class Supabase:
     def admin_copy(self, bucket, source, destination):
         """Copy one stored file to a new path inside the same bucket (server side, nothing is downloaded)."""
         self._admin("POST", "/storage/v1/object/copy", json_body={"bucketId": bucket, "sourceKey": source, "destinationKey": destination})
+
+    def admin_delete_user(self, user_id):
+        """Delete an account for good. The database then removes that person's trips, items and consent record with it."""
+        self._admin("DELETE", f"/auth/v1/admin/users/{user_id}")
