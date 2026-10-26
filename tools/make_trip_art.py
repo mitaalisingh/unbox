@@ -7,12 +7,12 @@ import os
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "trips")
 K = math.sqrt(3) / 2
-# bg, light, main, second, accent, ink
+# bg, light, main, second, accent, ink (bold food-app colours: olive, tomato, bubblegum, mango)
 PALETTES = [
-    ("#cfe0d2", "#f4f0e4", "#8fb59b", "#5f8f74", "#e8a65d", "#2c3a33"),     # sage
-    ("#f1d3cc", "#fbf3ea", "#d98c7a", "#b56a5a", "#5b7fa6", "#4a2c2a"),     # blush
-    ("#c9d6ee", "#f4f6fb", "#6f8fd0", "#4a6bb0", "#f2c14e", "#1f2d52"),     # sky
-    ("#f3e4b3", "#fff9e6", "#3f9a8f", "#2c7a70", "#e0715b", "#3a3320"),     # butter
+    ("#9bb552", "#fff4d6", "#f2893d", "#c95f27", "#e24b8f", "#3b2a14"),     # olive green tile, orange things
+    ("#e8603a", "#fff1dc", "#f4c23a", "#d99b1f", "#2f7a3e", "#43160c"),     # tomato tile, yolk yellow
+    ("#ec93c9", "#fff0f6", "#e8553a", "#b83a2a", "#5fa046", "#4a1730"),     # bubblegum tile, tomato red
+    ("#f4a93c", "#fff6e0", "#e24b8f", "#a82f68", "#4f9a3a", "#3a1d0a"),     # mango tile, pink
 ]
 
 

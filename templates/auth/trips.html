@@ -9,8 +9,8 @@
 {% if active %}
 <ul class="stack">
 {% for t in active %}
-  <li class="glass tripcard">
-    <a class="tripimg" href="{{ url_for('trip_view', tid=t['id']) }}" aria-label="Open {{ t['name'] }}"><img src="{{ url_for('static', filename=art[t['id']]) }}" alt="" loading="lazy"></a>
+  <li class="tripcard{{ ' flip' if loop.index is even }}">
+    <a class="tripimg" href="{{ url_for('trip_view', tid=t['id']) }}" aria-label="Open {{ t['name'] }}"><img src="{{ url_for('static', filename=art[t['id']]) }}" alt=""></a>
     <a class="txt" href="{{ url_for('trip_view', tid=t['id']) }}"><strong>{{ t['name'] }}</strong><small>Created {{ t['created_at'][:10] }}</small></a>
     <details class="more">
       <summary aria-label="More options for {{ t['name'] }}">⋯</summary>
