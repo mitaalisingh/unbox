@@ -2,26 +2,28 @@
 {% block title %}Your trips · Unbox{% endblock %}
 {% block content %}
 <h1>Your trips</h1>
-<p class="muted small">{{ user_email }} · <a href="{{ url_for('change_password') }}">Change password</a></p>
 <form method="post" class="glass addbox" style="margin-top:14px">
   <input type="hidden" name="csrf" value="{{ csrf_token() }}">
   <label>New trip <input name="name" maxlength="80" required placeholder="e.g. Hostel to home" autocomplete="off"></label>
-  <button class="primary" type="submit">Create trip</button>
+  <button class="primary compact" type="submit">Create trip</button>
 </form>
 {% if active %}
 <ul class="stack">
 {% for t in active %}
   <li class="glass boxcard">
-    <a class="txt" href="{{ url_for('trip_view', tid=t['id']) }}" style="color:inherit"><strong>{{ t['name'] }}</strong><small>Created {{ t['created_at'][:10] }} · open</small></a>
+    <a class="txt" href="{{ url_for('trip_view', tid=t['id']) }}" style="color:inherit;padding-right:34px"><strong>{{ t['name'] }}</strong><small>Created {{ t['created_at'][:10] }} · open</small></a>
     <details class="more">
       <summary aria-label="More options for {{ t['name'] }}">⋯</summary>
       <div class="menu">
         <form method="post" action="{{ url_for('archive_trip', tid=t['id']) }}">
           <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="menuitem" type="submit">Archive (hide, but keep)</button></form>
-        <form method="post" action="{{ url_for('delete_trip', tid=t['id']) }}" onsubmit="return confirm('Delete this trip and everything in it for good?')">
-          <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-          <label class="check"><input type="checkbox" name="sure"> I understand deleting can't be undone</label>
-          <button class="menuitem danger-text" type="submit">Delete forever</button></form>
+        <details class="askfirst">
+          <summary class="menuitem danger-text">Delete forever</summary>
+          <form method="post" action="{{ url_for('delete_trip', tid=t['id']) }}" onsubmit="return confirm('Delete this trip and everything in it for good?')">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+            <label class="check"><input type="checkbox" name="sure" onchange="this.form.querySelector('button').disabled=!this.checked"> I understand deleting can't be undone</label>
+            <button class="menuitem danger-text" type="submit" disabled>Delete this trip</button></form>
+        </details>
       </div>
     </details>
   </li>

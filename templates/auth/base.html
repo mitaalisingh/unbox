@@ -13,10 +13,7 @@
   {% block topbar %}<header class="topbar">
     <a class="brand" href="{{ url_for('home') }}">Unbox</a>
     {% if logged_in %}
-    <form method="post" action="{{ url_for('logout') }}" style="margin:0">
-      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-      <button class="back" type="submit" aria-label="Log out">Log out</button>
-    </form>
+    <a class="avatar" href="{{ url_for('account') }}" aria-label="Your profile">{{ (user_email[:1] or '•')|upper }}</a>
     {% else %}<a class="back" href="{{ url_for('login') }}">Log in</a>{% endif %}
   </header>{% endblock %}
   <main>

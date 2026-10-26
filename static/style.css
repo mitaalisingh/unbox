@@ -127,11 +127,11 @@ code{background:var(--glass-2);padding:2px 6px;border-radius:6px}
   border:1px solid var(--edge);background:var(--glass-2);color:var(--ink);font:500 13px var(--font);cursor:pointer}
 
 /* "⋯" menu: rarely used actions tucked away */
-.more{position:relative;flex:none}
-.more summary{list-style:none;display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--glass-2);
-  border:1px solid var(--edge);color:var(--ink);font-size:20px;line-height:1;cursor:pointer;user-select:none}
-.more summary::-webkit-details-marker{display:none}
-.more .menu{position:absolute;right:0;top:50px;z-index:30;width:250px;padding:10px;border-radius:16px;background:#161616;border:1px solid var(--edge);
+.more{position:absolute;top:10px;right:10px}
+.more > summary{list-style:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--glass-2);
+  border:1px solid var(--edge);color:var(--ink);font-size:16px;line-height:1;cursor:pointer;user-select:none}
+.more > summary::-webkit-details-marker{display:none}
+.more .menu{position:absolute;right:0;top:38px;z-index:30;width:250px;padding:10px;border-radius:16px;background:#161616;border:1px solid var(--edge);
   box-shadow:0 12px 34px rgba(0,0,0,.7)}
 .more .menu form{margin:0}
 .more .menu label.check{margin:4px 4px 6px}
@@ -160,3 +160,10 @@ code{background:var(--glass-2);padding:2px 6px;border-radius:6px}
 .strip button{flex:none;width:54px;height:54px;border-radius:12px;overflow:hidden;padding:0;border:2px solid transparent;background:var(--glass-2);opacity:.55;cursor:pointer;color:var(--ink)}
 .strip button.on{border-color:var(--paper);opacity:1}
 .strip img{width:100%;height:100%;object-fit:cover;display:block}
+
+.boxcard{position:relative}
+.trips-card-pad{padding-right:46px}
+button.primary.compact{width:auto;padding:10px 24px;font-size:15px;margin-top:12px}
+.askfirst summary{list-style:none;cursor:pointer}
+.askfirst summary::-webkit-details-marker{display:none}
+.avatar{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--glass-2);border:1px solid var(--edge);color:var(--ink);font-weight:500;font-size:15px}

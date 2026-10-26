@@ -293,6 +293,11 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             return redirect(url_for("change_password"))
         return after_login(tokens)
 
+    @app.route("/account")
+    @login_required
+    def account():
+        return render_template("auth/account.html")
+
     @app.route("/account/password", methods=["GET", "POST"])
     @login_required
     def change_password():
