@@ -847,7 +847,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         trip = get_trip(tid, token)
         if not trip:
             abort(404)
-        return render_template("auth/trip_settings.html", trip=trip)
+        return render_template("auth/trip_settings.html", trip=trip, section="rename" if request.args.get("section") == "rename" else "share")
 
     @app.route("/trips/<tid>/viewer-password", methods=["POST"])
     @login_required
@@ -865,7 +865,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
             client.update("trips", token, {"id": f"eq.{tid}"}, {"viewer_pw_hash": generate_password_hash(pw),
                                                                "viewer_pw_set_at": datetime.now(timezone.utc).isoformat()})
             flash("Viewer password saved. Anyone who scanned with the old one needs the new one.")
-        return redirect(url_for("trip_settings", tid=tid))
+        return redirect(url_for("trip_settings", tid=tid, section="share"))
 
     @app.route("/trips/<tid>/labels")
     @login_required
@@ -1065,7 +1065,7 @@ def create_app(sb=None, testing=False, embed_doc=None, embed_query=None, suggest
         else:
             client.update("trips", token, {"id": f"eq.{tid}"}, {"name": name})
             flash("Trip renamed.")
-        return redirect(url_for("trip_settings", tid=tid))
+        return redirect(url_for("trip_settings", tid=tid, section="rename"))
 
     @app.route("/trips/<tid>/n/<nid>/delete", methods=["POST"])
     @login_required

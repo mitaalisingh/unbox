@@ -10,13 +10,11 @@
 <p class="lead">Adding to: <strong>{{ box.name if box else 'loose items in ' ~ trip.name }}</strong></p>
 
 <details class="glass addbox" open>
-  <summary>📷 Upload photos</summary>
+  <summary>📷 Upload photos <span class="muted small">· up to 20 at a time</span></summary>
     <form method="post" action="{{ url_for('capture', tid=trip.id) }}" enctype="multipart/form-data">
       <input type="hidden" name="csrf" value="{{ csrf_token() }}">
       <input type="hidden" name="parent_id" value="{{ box.id if box else '' }}">
-      <label>Photos (up to 20, one item per photo) <input type="file" name="photos" accept="image/*" multiple required></label>
-      <p class="muted small">Each photo is named automatically on our own server, and you fix any that are wrong on the next screen. Location data is removed from photos.</p>
-      <button class="primary" type="submit" id="capture-go">Upload and name</button>
+      <label class="primary-link" id="capture-go" style="cursor:pointer;margin-top:14px">Upload<input type="file" name="photos" accept="image/*" multiple hidden></label>
       <p class="muted small" id="capture-status" role="status"></p>
     </form>
     <script>
@@ -37,15 +35,16 @@
           }, function () { resolve(file); });          // e.g. a format this browser can't open: send it as it is
         });
       }
+      form.querySelector('input[type=file]').addEventListener('change', function () { if (this.files.length && form.requestSubmit) form.requestSubmit(); });
       form.addEventListener('submit', function (e) {
         var files = Array.prototype.slice.call(form.querySelector('input[type=file]').files);
         if (!files.length || !window.fetch || !window.FormData) return;     // no JavaScript support: normal form post
         if (files.length > 20) { status.textContent = 'Up to 20 photos at a time, please.'; e.preventDefault(); return; }
-        e.preventDefault(); go.disabled = true;
+        e.preventDefault(); go.style.opacity = '.5'; go.style.pointerEvents = 'none';
         var results = [], failed = 0, i = 0;
         (function next() {
           if (i >= files.length) {
-            if (!results.length) { status.textContent = 'None of those photos could be used.'; go.disabled = false; return; }
+            if (!results.length) { status.textContent = 'None of those photos could be used.'; go.style.opacity = ''; go.style.pointerEvents = ''; return; }
             var f = document.createElement('form'); f.method = 'post'; f.action = show;
             [['csrf', form.querySelector('[name=csrf]').value], ['back', back], ['results', JSON.stringify(results)]].forEach(function (p) {
               var h = document.createElement('input'); h.type = 'hidden'; h.name = p[0]; h.value = p[1]; f.appendChild(h);

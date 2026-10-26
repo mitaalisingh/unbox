@@ -41,8 +41,8 @@
       <form method="post" action="{{ url_for('delete_node', tid=trip.id, nid=node.id) }}" onsubmit="return confirm('Delete {{ node.name|e }} and everything inside it for good?')">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="menuitem danger-text" type="submit">Delete this box</button></form>
     {% else %}
-      {% if not locked %}<a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id) }}#rename">Rename trip</a>{% endif %}
-      <a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id) }}#share">Viewer password</a>
+      {% if not locked %}<a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id, section='rename') }}">Rename trip</a>{% endif %}
+      <a class="menuitem" href="{{ url_for('trip_settings', tid=trip.id, section='share') }}">Viewer password</a>
       <a class="menuitem" href="{{ url_for('labels', tid=trip.id) }}">Print QR labels</a>
       <form method="post" action="{{ url_for('lock_trip', tid=trip.id) }}">
         <input type="hidden" name="csrf" value="{{ csrf_token() }}"><input type="hidden" name="lock" value="{{ '0' if locked else '1' }}">

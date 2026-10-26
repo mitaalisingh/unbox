@@ -1033,10 +1033,12 @@ def test_creating_a_sub_storage_returns_to_the_trip_so_items_can_be_dragged_in(f
     assert fake.tables["nodes"][2]["parent_id"] == box["id"] and r.headers["Location"].endswith(f"/n/{box['id']}")
 
 
-def test_trip_settings_page_holds_rename_sharing_and_labels(fake, app):
+def test_trip_settings_shows_one_section_at_a_time(fake, app):
     owner, tid, big = shared_trip(fake, app, password=None)
-    page = owner.get(f"/trips/{tid}/settings").get_data(as_text=True)
-    assert "Rename this trip" in page and "Share with a viewer password" in page and "Print QR labels" in page
+    share = owner.get(f"/trips/{tid}/settings?section=share").get_data(as_text=True)
+    assert "Share with a viewer password" in share and "Print QR labels" in share and "Rename this trip" not in share
+    rename = owner.get(f"/trips/{tid}/settings?section=rename").get_data(as_text=True)
+    assert "Rename this trip" in rename and "Share with a viewer password" not in rename
     trip_page = owner.get(f"/trips/{tid}").get_data(as_text=True)
     assert "Share with a viewer password" not in trip_page and "Rename this trip" not in trip_page   # tucked away in the menu
     assert "Rename trip" in trip_page and f"/trips/{tid}/settings" in trip_page

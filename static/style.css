@@ -174,7 +174,7 @@ button.primary.compact{display:block;width:auto;padding:10px 26px;font-size:15px
 .newtrip[open] > summary{margin-bottom:6px}
 
 /* add items: big button, drag-to-move */
-a.primary-link{display:flex;align-items:center;justify-content:center;padding:15px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:500;font-size:16px}
+a.primary-link,label.primary-link{display:flex;align-items:center;justify-content:center;padding:15px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font-weight:500;font-size:16px}
 .itemview .tile{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .tile.lifted{opacity:.35}
 .tile.ghost{position:fixed!important;z-index:60;pointer-events:none;opacity:.92;transform:scale(1.06) rotate(-2deg);box-shadow:0 18px 40px rgba(0,0,0,.8);margin:0}
